@@ -1,0 +1,267 @@
+
+import { createContext, useContext, useState, useEffect } from "react";
+
+type Language = "en" | "ar";
+
+// Language strings mapping
+export const translations = {
+  en: {
+    welcome: "Welcome to Kian Restaurant & Café",
+    selectTable: "Please select your table number to begin",
+    callWaiter: "Call a Waiter",
+    viewMenu: "View Menu & Order",
+    tableSelected: "You selected Table",
+    back: "Back",
+    restaurantMenu: "Kian Restaurant & Café Menu",
+    table: "Table",
+    menuContent: "Menu content will be implemented in the next version.",
+    menuDescription: "This section will include categories, items, and ordering functionality.",
+    callWaiterTo: "Call a Waiter to Table",
+    whatYouNeed: "What would you like the waiter to bring with him if possible? (Optional)",
+    placeholder: "e.g., Extra napkins, water, etc.",
+    callWaiterNow: "Call Waiter Now",
+    calling: "Calling...",
+    waiterCalled: "Waiter called",
+    staffComing: "A staff member will be with you shortly at Table",
+    tableRequired: "Table selection required",
+    pleaseSelect: "Please select your table number first",
+    error: "Error",
+    noTable: "No table number provided. Please select your table first.",
+    darkMode: "Dark Mode",
+    lightMode: "Light Mode",
+    english: "English",
+    arabic: "العربية",
+    errorSendingRequest: "Failed to send request. Please try again.",
+    staffDashboard: "Staff Dashboard",
+    manageRequests: "Manage customer waiter requests",
+    noRequests: "No waiter requests at this time.",
+    loadingRequests: "Loading requests...",
+    tableColumn: "Table",
+    timeColumn: "Time",
+    requestColumn: "Request",
+    statusColumn: "Status",
+    actionColumn: "Action",
+    markComplete: "Mark Complete",
+    completed: "Completed",
+    markPending: "Mark Pending",
+    pending: "Pending",
+    noSpecificRequest: "No specific request",
+    invalidEgyptianPhone: "Invalid Egyptian phone number",
+    delete: "Delete",
+    success: "Success",
+    markedAsComplete: "Marked as complete",
+    markedAsPending: "Marked as pending",
+    deleted: "Deleted",
+    failed: "Failed",
+    failedToMarkAsComplete: "Failed to mark as complete",
+    failedToMarkAsPending: "Failed to mark as pending",
+    failedToDelete: "Failed to delete", 
+    failedToDeleteRequest: "Failed to delete request",
+    failedToUpdateRequestStatus: "Failed to update request status",
+    failedToLoadWaiterRequests: "Failed to load waiter requests",
+    failedToFetchLoyaltyInfo: "Failed to fetch loyalty info",
+    failedToLoadLoyaltyInfo: "Failed to load loyalty info",   
+    failedToLoadRequests: "Failed to load requests", 
+    points: "Points",
+    gift: "Gift",
+    phoneNumber: "Phone Number",
+    activeRequests: "Active Requests",
+    checkLoyaltyPoints: "Check Your Loyalty Points",
+    enterPhoneNumber: "Enter your phone number",
+    search: "Search",
+    searching: "Searching...",
+    noResults: "No Results",
+    noLoyaltyFound: "No loyalty points found for this phone number",
+    freeDrink: "Free Drink",
+    discount: "20% Discount",
+    pointsToFreeDrink: "more points for a free drink",
+    pointsToDiscount: "more points for 20% discount",
+    tenPointsMessage: "Thank you for coming to the café 10 times. We are all grateful to you here and happy that you liked the place and are waiting for you next time.",
+    twentyPointsMessage: "Wow! You've visited us 20 times! We're honored by your loyalty and want to thank you with a special discount. We look forward to seeing you again soon!",
+    almostThereMessage: "You're almost there!",
+    keepGoingMessage: "Keep going!",
+    pointsAwayFromReward: "more visits until you get a free drink!",
+    pointsAwayFromDiscount: "more visits until you get a 20% discount!",
+    celebrationTitle: "Congratulations!",
+    thanks: "Thank you!",
+    egyptianPhonePlaceholder: " Egyptian phone number",
+    loyaltyPointsInfo: "  every time you visit you get points and you can get rewards ",
+    giftStatus: "Gift Status",
+    giftReceived: "Received",
+    giftNotReceived: "Not Received",
+    toggleGiftStatus: "Toggle Gift Status",
+    failedToUpdateGiftStatus: "Failed to update gift status",
+    loyaltyPoints: "Loyalty Points",
+    enterPassword: "Enter Password",
+    wrongPassword: "Wrong Password",
+    login: "Login",
+    logout: "Logout",
+    loginFailed: "Login Failed",
+    invalidCredentials: "Invalid Credentials",
+    passwordRequired: "Password is required",
+    passwordMismatch: "Passwords do not match",
+    passwordLength: "Password must be at least 6 characters long",
+    passwordStrength: "Password Strength",
+    enterUsername: "Enter your user name",
+    Password: "Password",
+    username: "Username",
+    pointStatus: "Point Status",
+    approved: "Approved",
+    rejected: "Rejected",
+    pointApproved: "Point Approved",
+    pointRejected: "Point Rejected",
+    pointPending: "Point Pending",
+    pointRemoved: "Point Removed",
+    pointRemovedFromCustomer: "Point Removed From Customer",
+  },
+  ar: {
+    welcome: "مرحبًا بكم في مطعم وكافيه كيان  ",
+    selectTable: "يرجى تحديد رقم الطاولة الخاصة بك للبدء",
+    callWaiter: "استدعاء النادل",
+    viewMenu: "عرض القائمة والطلب",
+    tableSelected: "لقد اخترت الطاولة رقم",
+    back: "رجوع",
+    restaurantMenu: "قائمة كيان مطعم ومقهى",
+    table: "طاولة",
+    menuContent: "سيتم تنفيذ محتوى القائمة في الإصدار التالي.",
+    menuDescription: "سيتضمن هذا القسم الفئات والعناصر ووظائف الطلب.",
+    callWaiterTo: "استدعاء النادل إلى الطاولة",
+    whatYouNeed: "ما الذي تحتاج ليحضره النادل معه اذا امكن ؟ (اختياري)",
+    placeholder: "مثال: مناديل إضافية، ماء، إلخ.",
+    callWaiterNow: "استدعاء النادل الآن",
+    calling: "جاري الاتصال...",
+    waiterCalled: "تم استدعاء النادل",
+    staffComing: "سيكون أحد الموظفين معك قريباً في الطاولة",
+    tableRequired: "يلزم اختيار طاولة",
+    pleaseSelect: "يرجى تحديد رقم الطاولة الخاصة بك أولاً",
+    error: "خطأ",
+    noTable: "لم يتم تحديد رقم الطاولة. يرجى تحديد الطاولة الخاصة بك أولاً.",
+    darkMode: "الوضع المظلم",
+    lightMode: "الوضع المضيء",
+    english: "English",
+    arabic: "العربية",
+    errorSendingRequest: "فشل في إرسال الطلب. يرجى المحاولة مرة أخرى.",
+    staffDashboard: "لوحة تحكم الموظفين",
+    manageRequests: "إدارة طلبات العملاء للنادل",
+    noRequests: "لا توجد طلبات للنادل في الوقت الحالي.",
+    loadingRequests: "جاري تحميل الطلبات...",
+    tableColumn: "الطاولة",
+    timeColumn: "الوقت",
+    requestColumn: "الطلب",
+    statusColumn: "الحالة",
+    actionColumn: "الإجراء",
+    markComplete: "اجعله مكتمل ",
+    completed: "مكتمل",
+    markPending: "اجعله منتظر التنفيذ",
+    pending: " منتظر التنفيذ",
+    noSpecificRequest: "لا يوجد طلب محدد",
+    invalidEgyptianPhone: "رقم هاتف مصري غير صالح",
+    delete: "حذف",
+    success: "تم بنجاح",
+    markedAsComplete: " تم الانتهاء من الطلب",
+    markedAsPending: "انه في الانتظار",
+    deleted: "تم حذفه",
+    failed: "فشل",
+    failedToMarkAsComplete: "فشل في اجباره على الانتهاء",
+    failedToMarkAsPending: "فشل في اجباره على الانتهاء",
+    failedToDelete: "فشل في حذفه",
+    failedToDeleteRequest: "فشل في حذف الطلب",
+    failedToUpdateRequestStatus: "فشل في تحديث حالة الطلب",
+    failedToLoadWaiterRequests: "فشل في تحميل طلبات النادل",
+    failedToFetchLoyaltyInfo: "فشل في تحميل معلومات الولاء",
+    failedToLoadLoyaltyInfo: "فشل في تحميل معلومات الولاء",   
+    failedToLoadRequests: "فشل في تحميل الطلبات", 
+    points: "نقاط",
+    gift: "هدية",
+    phoneNumber: "رقم الهاتف",
+    activeRequests: "الطلبات النشطة",
+    checkLoyaltyPoints: "تحقق من نقاط الولاء الخاصة بك",
+    enterPhoneNumber: "أدخل رقم هاتفك",
+    search: "بحث",
+    searching: "جاري البحث...",
+    noResults: "لا توجد نتائج",
+    noLoyaltyFound: "لم يتم العثور على نقاط ولاء لرقم الهاتف هذا",
+    freeDrink: "مشروب مجاني",
+    discount: "خصم 20%",
+    pointsToFreeDrink: "نقاط أخرى للحصول على مشروب مجاني",
+    pointsToDiscount: "نقاط أخرى للحصول على خصم 20%",
+    tenPointsMessage: "شكراً لقدومك إلى المقهى 10 مرات. نحن جميعاً ممتنون لك هنا وسعداء لأنك أحببت المكان  ولك منا مشروب مجاني اذا كنت لم تحصل عليه من قبل اطلبه , وننتظرك في المرة القادمة.",
+    twentyPointsMessage: "رائع! لقد زرتنا 20 مرة! نحن نشعر بالشرف لولائك ونريد أن نشكرك بخصم 20%. نتطلع إلى رؤيتك مرة أخرى قريباً!",
+    almostThereMessage: "أنت على وشك الوصول!",
+    keepGoingMessage: "واصل التقدم!",
+    pointsAwayFromReward: "زيارات أخرى حتى تحصل على مشروب مجاني!",
+    pointsAwayFromDiscount: "زيارات أخرى حتى تحصل على خصم 20%!",
+    celebrationTitle: "تهانينا!",
+    thanks: "شكراً لك!",
+    egyptianPhonePlaceholder: "أدخل رقم هاتفك المصري",
+    loyaltyPointsInfo: " كل ما تيجي مرة تانية تزداد نقطة وتاخد هدايا ",
+    giftStatus: "حالة الهدية",
+    giftReceived: "تم الاستلام",
+    giftNotReceived: "لم يتم الاستلام",
+    toggleGiftStatus: "تغيير حالة الهدية",
+    failedToUpdateGiftStatus: "فشل في تحديث حالة الهدية",
+    loyaltyPoints: "نقاط الولاء",
+    enterPassword: "أدخل كلمة المرور",
+    wrongPassword: "كلمة المرور خاطئة",
+    login: "تسجيل الدخول",
+    logout: "تسجيل الخروج",
+    loginFailed: "فشل تسجيل الدخول",
+    invalidCredentials: "معلومات الدخول غير صالحة",
+    passwordRequired: "كلمة المرور مطلوبة",
+    enterUsername: "أدخل اسم المستخدم",
+    passwordMismatch: "كلمات المرور غير متطابقة",
+    passwordLength: "كلمة المرور يجب أن تكون على الأقل 6 أحرف",
+    passwordStrength: "قوة كلمة المرور",
+    Password: "كلمة المرور",
+    username: "اسم المستخدم",
+    pointStatus: "حالة النقاط",
+    approved: "تمت الموافقة",
+    rejected: "تم الرفض",
+    pointApproved: "تم الموافقة على النقاط",
+    pointRejected: "تم رفض  النقاط",
+    pointPending: "النقاط في الانتظار",
+    pointRemoved: "تم حذف النقاط",
+    pointRemovedFromCustomer: "تم حذف النقاط من العميل",
+    
+  }
+};
+
+interface LanguageContextType {
+  language: Language;
+  toggleLanguage: () => void;
+  t: (key: keyof typeof translations.en) => string;
+}
+
+const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
+
+export function LanguageProvider({ children }: { children: React.ReactNode }) {
+  const [language, setLanguage] = useState<Language>("ar");
+
+  useEffect(() => {
+    document.documentElement.lang = language;
+    document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
+    localStorage.setItem("language", language);
+  }, [language]);
+
+  const toggleLanguage = () => {
+    setLanguage(prevLang => prevLang === "en" ? "ar" : "en");
+  };
+
+  const t = (key: keyof typeof translations.en) => {
+    return translations[language][key] || key;
+  };
+
+  return (
+    <LanguageContext.Provider value={{ language, toggleLanguage, t }}>
+      {children}
+    </LanguageContext.Provider>
+  );
+}
+
+export const useLanguage = () => {
+  const context = useContext(LanguageContext);
+  if (context === undefined) {
+    throw new Error("useLanguage must be used within a LanguageProvider");
+  }
+  return context;
+};

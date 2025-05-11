@@ -1,0 +1,157 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&family=Tajawal:wght@300;400;500;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Light mode colors - Black, White, Gold */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 0%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 0%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 0%;
+
+    --primary: 45 100% 50%;
+    --primary-foreground: 0 0% 0%;
+
+    --secondary: 0 0% 8%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;
+
+    --accent: 45 100% 50%;
+    --accent-foreground: 0 0% 0%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 45 100% 50%;
+
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    /* Dark mode colors - Black, White, Gold with more white text */
+    --background: 0 0% 0%;              /* Black */
+    --foreground: 0 0% 100%;            /* White */
+
+    --card: 0 0% 0%;                    /* Black */
+    --card-foreground: 0 0% 100%;       /* White */
+
+    --popover: 0 0% 0%;                 /* Black */
+    --popover-foreground: 0 0% 100%;    /* White */
+
+    --primary: 45 100% 50%;             /* Gold */
+    --primary-foreground: 0 0% 0%;      /* Black (for contrast on gold) */
+
+    --secondary: 0 0% 10%;              /* Very dark gray, nearly black */
+    --secondary-foreground: 0 0% 100%;  /* White */
+
+    --muted: 0 0% 15%;                  /* Very dark gray */
+    --muted-foreground: 0 0% 85%;       /* Light gray/white */
+
+    --accent: 45 100% 50%;              /* Gold */
+    --accent-foreground: 0 0% 0%;       /* Black */
+
+    --destructive: 0 0% 100%;           /* White (for destructive, e.g., delete) */
+    --destructive-foreground: 0 0% 0%;  /* Black */
+
+    --border: 0 0% 20%;                 /* Dark gray border */
+    --input: 0 0% 20%;                  /* Dark gray input */
+    --ring: 45 100% 50%;                /* Gold */
+    color: #fff; /* Ensure all text is white in dark mode */
+  }
+
+  /* RTL Support */
+  [dir="rtl"] .table-grid {
+    @apply grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3;
+  }
+
+  [dir="rtl"] .action-button svg {
+    @apply ml-2 mr-0;
+  }
+}
+
+@layer utilities {
+  .table-grid {
+    @apply grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3;
+  }
+
+  .cafe-container {
+    @apply max-w-3xl mx-auto px-4 py-6;
+  }
+  
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-black to-gold dark:from-gold dark:to-white;
+  }
+
+  .bg-gradient-transition {
+    @apply transition-colors duration-300;
+  }
+
+  .trash-button {
+    @apply bg-red-600 text-white hover:bg-red-700;
+  }
+}
+
+body {
+  @apply font-tajawal bg-gradient-to-br from-gray-100/50 to-white dark:from-black dark:to-gray-900 min-h-screen transition-colors duration-300;
+}
+
+h1, h2, h3 {
+  @apply font-cairo;
+}
+
+.table-card {
+  @apply relative flex items-center justify-center rounded-xl p-4 shadow-md transition-all duration-300 bg-white dark:bg-gray-900/70 hover:shadow-lg hover:scale-105 active:scale-95 cursor-pointer;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.table-card.selected {
+  @apply  bg-gold dark:bg-gold shadow-lg scale-150;
+}
+
+.action-button {
+  @apply relative overflow-hidden rounded-xl shadow-md transition-all duration-300 hover:shadow-xl active:scale-95;
+}
+
+/* Additional styles for dark mode harmony */
+.dark p {
+  @apply text-white/90;
+}
+
+.dark .card, 
+.dark .bg-card {
+  @apply bg-gray-900 text-white border-gray-800;
+}
+
+.dark .text-muted {
+  @apply text-gray-300;
+}
+
+.dark .text-kian-charcoal\/70, 
+.dark .text-kian-charcoal\/80, 
+.dark .text-kian-charcoal\/50 {
+  @apply text-white/80;
+}
+
+.dark .border-kian-burgundy {
+  @apply border-white/20;
+}
+
+[dir="rtl"] .peer[data-state="checked"] .switch-thumb {
+  /* Reverse the thumb direction in RTL */
+  transform: translateX(-1.25rem) !important; /* -20px or -5 (tailwind) */
+}
+[dir="rtl"] .peer[data-state="checked"] ~ .switch-thumb {
+  transform: translateX(0) !important;
+}
