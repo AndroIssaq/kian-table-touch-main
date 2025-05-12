@@ -132,45 +132,69 @@ const StaffDashboard = () => {
     };
   }, [t]);
 
-  // Fetch loyalty information for phone numbers
-  const fetchLoyaltyInfo = async (phoneNumbers: string[]) => {
-    try {
-      // Skip if no phone numbers to fetch
-      if (!phoneNumbers.length) return;
+// تعديل في وظيفة fetchLoyaltyInfo
+const fetchLoyaltyInfo = async (phoneNumbers: string[]) => {
+  try {
+    // تخطي إذا لم تكن هناك أرقام هواتف للجلب
+    if (!phoneNumbers.length) return;
+    
+    console.log("Fetching loyalty info for:", phoneNumbers); // إضافة سجل للتصحيح
+    
+    const { data, error } = await supabase
+      .from("loyalty_visits")
+      .select("id, phone_number, points, status, got_the_gift, point_status")
+      .in("phone_number", phoneNumbers);
+
+    if (error) {
+      throw error;
+    }
+
+    // إنشاء أو تحديث بيانات الولاء لكل رقم هاتف
+    const loyaltyData: Record<string, LoyaltyInfo> = {};
+    const phonesToCreate: string[] = [...phoneNumbers];
+    
+    // معالجة البيانات الموجودة من قاعدة البيانات
+    if (data && data.length > 0) {
+      data.forEach((item) => {
+        // إزالة من قائمة الهواتف المراد إنشاؤها
+        const index = phonesToCreate.indexOf(item.phone_number);
+        if (index > -1) {
+          phonesToCreate.splice(index, 1);
+        }
+        
+        // التأكد من أن حالة النقطة معينة على 'pending' إذا كانت null
+        loyaltyData[item.phone_number] = {
+          ...item,
+          point_status: item.point_status || 'pending'
+        };
+      });
+    }
+    
+    // إنشاء إدخالات لأرقام الهواتف التي لا توجد في قاعدة البيانات بعد
+    if (phonesToCreate.length > 0) {
+      console.log("Creating new loyalty entries for:", phonesToCreate); // إضافة سجل للتصحيح
       
-      const { data, error } = await supabase
+      // إضافة تأخير قصير قبل إنشاء سجلات جديدة
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // التحقق مرة أخرى من وجود السجلات (لتجنب الإدخالات المكررة)
+      const { data: doubleCheckData, error: doubleCheckError } = await supabase
         .from("loyalty_visits")
-        .select("id, phone_number, points, status, got_the_gift, point_status")
-        .in("phone_number", phoneNumbers);
-
-      if (error) {
-        throw error;
-      }
-
-      // Create or update loyalty data for each phone number
-      const loyaltyData: Record<string, LoyaltyInfo> = {};
-      const phonesToCreate: string[] = [...phoneNumbers];
-      
-      // Process existing data from database
-      if (data && data.length > 0) {
-        data.forEach((item) => {
-          // Remove from the list of phones to create
+        .select("phone_number")
+        .in("phone_number", phonesToCreate);
+        
+      if (!doubleCheckError && doubleCheckData && doubleCheckData.length > 0) {
+        // إزالة أرقام الهواتف التي تم إنشاؤها بالفعل
+        doubleCheckData.forEach(item => {
           const index = phonesToCreate.indexOf(item.phone_number);
           if (index > -1) {
             phonesToCreate.splice(index, 1);
           }
-          
-          // Ensure point_status is set to 'pending' if it's null
-          loyaltyData[item.phone_number] = {
-            ...item,
-            point_status: item.point_status || 'pending'
-          };
         });
       }
       
-      // Create entries for phone numbers that don't exist in the database yet
+      // إنشاء إدخالات في دفعة واحدة (فقط للأرقام التي لا تزال بحاجة إلى إنشاء)
       if (phonesToCreate.length > 0) {
-        // Create entries in batch
         const newEntries = phonesToCreate.map(phone => ({
           phone_number: phone,
           points: 0,
@@ -179,26 +203,28 @@ const StaffDashboard = () => {
           point_status: 'pending'
         }));
         
-        // Insert all new entries at once
+        // إدراج جميع الإدخالات الجديدة دفعة واحدة
         const { data: newData, error: insertError } = await supabase
           .from("loyalty_visits")
           .insert(newEntries)
           .select("id, phone_number, points, status, got_the_gift, point_status");
           
         if (!insertError && newData) {
-          // Add new entries to loyaltyData
+          // إضافة إدخالات جديدة إلى loyaltyData
           newData.forEach(item => {
             loyaltyData[item.phone_number] = item;
           });
+        } else if (insertError) {
+          console.error("Error inserting new loyalty entries:", insertError);
         }
       }
-      
-      setLoyaltyInfo((prev) => ({ ...prev, ...loyaltyData }));
-    } catch (error) {
-      console.error("Error fetching loyalty information:", error);
     }
-  };
-  
+    
+    setLoyaltyInfo((prev) => ({ ...prev, ...loyaltyData }));
+  } catch (error) {
+    console.error("Error fetching loyalty information:", error);
+  }
+};
   // Create a new loyalty entry for a phone number
   const createLoyaltyEntry = async (phoneNumber: string) => {
     try {
