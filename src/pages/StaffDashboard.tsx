@@ -99,29 +99,17 @@ const StaffDashboard = () => {
         },
         (payload) => {
           if (payload.eventType === "INSERT") {
-            const newRequest = payload.new as WaiterRequest;
-            setRequests((prev) => [newRequest, ...prev]);
-            
-            // Fetch loyalty info if phone number exists
-            if (newRequest.phone_number) {
-              fetchLoyaltyInfo([newRequest.phone_number]);
-            }
-            
-            // Show notification for new request
+            // بدلاً من إضافة الطلب فقط، قم بتحديث كل الطلبات
+            fetchRequests();
+            // يمكن أيضاً عرض toast إذا أردت
             toast({
               title: "New request",
-              description: `New request from Table ${newRequest.table_number}`,
+              description: `New request from Table ${payload.new.table_number}`,
             });
           } else if (payload.eventType === "UPDATE") {
-            const updatedRequest = payload.new as WaiterRequest;
-            setRequests((prev) =>
-              prev.map((req) =>
-                req.id === updatedRequest.id ? updatedRequest : req
-              )
-            );
+            fetchRequests();
           } else if (payload.eventType === "DELETE") {
-            const deletedId = payload.old.id;
-            setRequests((prev) => prev.filter((req) => req.id !== deletedId));
+            fetchRequests();
           }
         }
       )
@@ -430,6 +418,9 @@ const fetchLoyaltyInfo = async (phoneNumbers: string[]) => {
           }
         };
       });
+
+      // أضف هذا السطر بعد تحديث الحالية المحلية
+      fetchLoyaltyInfo([phoneNumber]);
 
       // Show appropriate toast message
       const messageMap = {
