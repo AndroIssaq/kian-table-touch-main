@@ -17,6 +17,7 @@ export type Database = {
           last_visit: string
           created_at: string
           status?: string
+          gift?: string
         }
         Insert: {
           id?: string
@@ -25,6 +26,7 @@ export type Database = {
           last_visit?: string
           created_at?: string
           status?: string
+          gift?: string
         }
         Update: {
           id?: string
@@ -33,6 +35,7 @@ export type Database = {
           last_visit?: string
           created_at?: string
           status?: string
+          gift?: string
         }
         Relationships: []
       },
@@ -62,6 +65,42 @@ export type Database = {
         }
         Relationships: []
       }
+      items: {
+        Row: {
+          id: string;
+          name_ar: string;
+          name_en: string;
+          price: number;
+          points: number;
+          image_url?: string | null;
+          description_ar?: string | null;
+          description_en?: string | null;
+          category_id: number;
+        };
+        Insert: {
+          id?: string;
+          name_ar: string;
+          name_en: string;
+          price: number;
+          points: number;
+          image_url?: string | null;
+          description_ar?: string | null;
+          description_en?: string | null;
+          category_id: number;
+        };
+        Update: {
+          id?: string;
+          name_ar?: string;
+          name_en?: string;
+          price?: number;
+          points?: number;
+          image_url?: string | null;
+          description_ar?: string | null;
+          description_en?: string | null;
+          category_id?: number;
+        };
+        Relationships: [];
+      },
     }
     Views: {
       [_ in never]: never

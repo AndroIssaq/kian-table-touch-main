@@ -19,6 +19,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {ArrowLeft} from "lucide-react";
+import { useLoading } from "@/contexts/LoadingContext";
 
 interface DailyCode {
   id?: number;
@@ -31,30 +32,26 @@ interface DailyCode {
 
 const LoyaltyManagement: React.FC = () => {
   const navigate = useNavigate();
-  // حالات لتتبع عملية التوليد
-  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const { setLoading } = useLoading();
+  const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState<string>('');
   const [generatedCodes, setGeneratedCodes] = useState<DailyCode[]>([]);
   const [existingCode, setExistingCode] = useState<DailyCode | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  // التحقق من وجود كود لليوم الحالي عند تحميل الصفحة
   useEffect(() => {
     checkExistingCode();
   }, []);
 
-  // وظيفة للتحقق من وجود كود لليوم الحالي
   const checkExistingCode = async () => {
     try {
-      setStatus('loading');
+      setLoading(true);
       setMessage('جاري التحقق من وجود كود لليوم الحالي...');
 
-      // الحصول على تاريخ اليوم (بداية اليوم)
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       
-      // الحصول على الكود الحالي لليوم
       const { data, error } = await supabase
         .from('daily_codes')
         .select('*')
@@ -80,34 +77,30 @@ const LoyaltyManagement: React.FC = () => {
       console.error('خطأ في التحقق من وجود كود:', error);
       setStatus('error');
       setMessage(error instanceof Error ? error.message : 'حدث خطأ أثناء التحقق من وجود كود');
+    } finally {
+      setLoading(false);
     }
   };
 
-  // وظيفة لتوليد الأكواد اليومية وحفظها في Supabase
   const generateDailyCodes = async () => {
     try {
-      // التحقق من وجود كود لليوم الحالي
       if (existingCode) {
         setStatus('error');
         setMessage('يوجد بالفعل كود لليوم الحالي. يرجى حذف الكود الحالي أولاً قبل إنشاء كود جديد.');
         return;
       }
 
-      // تحديث الحالة إلى "جاري التحميل"
-      setStatus('loading');
+      setLoading(true);
       setMessage('جاري توليد الكود اليومي...');
       
-      // إنشاء تاريخ انتهاء الصلاحية (نهاية اليوم الحالي)
       const today = new Date();
       const validUntil = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59).toISOString();
       
-      // توليد كود واحد لجميع الطاولات
       const dailyCode = {
         code: generateRandomCode(),
         valid_until: validUntil,
       };
       
-      // حفظ الكود في جدول daily_codes
       const { data, error } = await supabase
         .from('daily_codes')
         .insert([dailyCode])
@@ -117,7 +110,6 @@ const LoyaltyManagement: React.FC = () => {
         throw new Error(`خطأ في حفظ الكود: ${error.message}`);
       }
       
-      // تحديث الحالة بنجاح
       setStatus('success');
       setMessage('تم توليد الكود اليومي بنجاح!');
       setGeneratedCodes(data || [dailyCode]);
@@ -127,10 +119,11 @@ const LoyaltyManagement: React.FC = () => {
       console.error('خطأ في توليد الكود اليومي:', error);
       setStatus('error');
       setMessage(error instanceof Error ? error.message : 'حدث خطأ أثناء توليد الكود اليومي');
+    } finally {
+      setLoading(false);
     }
   };
 
-  // وظيفة لحذف الكود الحالي
   const deleteExistingCode = async () => {
     try {
       if (!existingCode || !existingCode.id) {
@@ -140,8 +133,8 @@ const LoyaltyManagement: React.FC = () => {
       }
 
       setIsDeleting(true);
+      setLoading(true);
       
-      // حذف الكود من قاعدة البيانات
       const { error } = await supabase
         .from('daily_codes')
         .delete()
@@ -151,7 +144,6 @@ const LoyaltyManagement: React.FC = () => {
         throw new Error(`خطأ في حذف الكود: ${error.message}`);
       }
       
-      // تحديث الحالة
       setStatus('success');
       setMessage('تم حذف الكود بنجاح');
       setExistingCode(null);
@@ -164,18 +156,16 @@ const LoyaltyManagement: React.FC = () => {
     } finally {
       setIsDeleting(false);
       setIsDeleteDialogOpen(false);
+      setLoading(false);
     }
   };
 
-  // وظيفة لتوليد كود عشوائي من 4 أرقام
   const generateRandomCode = () => {
     return Math.floor(1000 + Math.random() * 9000).toString();
   };
 
-  // تحديد لون الإشعار بناءً على الحالة
   const getAlertVariant = () => {
     switch (status) {
-      case 'loading': return 'default';
       case 'success': return 'default';
       case 'error': return 'destructive';
       default: return 'default';
@@ -214,20 +204,13 @@ const LoyaltyManagement: React.FC = () => {
               <Button
                 variant="default"
                 className="mt-4"
-                disabled={status === 'loading' || existingCode !== null}
+                disabled={existingCode !== null}
                 onClick={generateDailyCodes}
               >
-                {status === 'loading' && !isDeleting ? (
-                  <>
-                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                    جاري التوليد...
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    توليد الكود اليومي
-                  </>
-                )}
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  توليد الكود اليومي
+                </>
               </Button>
               
               {existingCode && (

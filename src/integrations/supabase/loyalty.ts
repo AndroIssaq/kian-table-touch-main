@@ -1,247 +1,165 @@
-
-
-/**
- * تسجّل زيارة جديدة للعميل بناءً على رقم الهاتف.
- * إذا كان العميل موجودًا، يتم زيادة النقاط. إذا وصل لعدد معين من النقاط، يمكن إظهار مكافأة.
- * @param phoneNumber رقم الهاتف للعميل
- * @param withPhoneNumber إذا كان الطلب يتضمن رقم هاتف
- * @returns كائن يحتوي على النقاط الحالية ونوع المكافأة (إن وجدت) وما إذا كان المستخدم قد حصل على نقاط اليوم
- */
 /**
  * يجلب معلومات نقاط الولاء للعميل بناءً على رقم الهاتف
- * @param phoneNumber رقم الهاتف للعميل
- * @returns كائن يحتوي على النقاط الحالية ونوع المكافأة (إن وجدت)
  */
-export async function getLoyaltyPoints(phoneNumber: string): Promise<{ points: number, reward?: string, found: boolean }> {
-  // إذا لم يتم توفير رقم هاتف
-  if (!phoneNumber || phoneNumber.trim() === "") {
+
+import { supabase } from './client';
+
+// جلب معلومات نقاط الولاء بناءً على userId
+export async function getLoyaltyPointsByUserId(userId: string): Promise<{ points: number, reward?: string, found: boolean, gift?: string | null, got_the_gift?: boolean | null }> {
+  if (!userId) {
     return { points: 0, found: false };
   }
-  
-  // تنظيف رقم الهاتف من أي أحرف غير رقمية
-  const cleanPhoneNumber = phoneNumber.replace(/\D/g, "");
-  
-  // جلب بيانات العميل من جدول الولاء
   const { data, error } = await supabase
     .from("loyalty_visits")
-    .select("points")
-    .eq("phone_number", cleanPhoneNumber)
+    .select("points, gift, got_the_gift")
+    .eq("user_id", userId)
     .single();
-
   if (error) {
-    // إذا لم يتم العثور على العميل
     if (error.code === "PGRST116") {
       return { points: 0, found: false };
     }
-    // خطأ آخر
     console.error("Error fetching loyalty points:", error);
     throw error;
   }
-
-  let reward;
-  // التحقق من المكافآت
-  if (data.points === 20) {
-    reward = "special_discount";  // 20% discount
-  } else if (data.points === 10) {
-    reward = "free_drink";  // Free drink
+  const points = (data && typeof data === 'object' && 'points' in data) ? (data as any).points ?? 0 : 0;
+  let reward = undefined;
+  if (points >= 20) {
+    reward = "special_discount";
+  } else if (points >= 10) {
+    reward = "free_drink";
   }
-
-  return { points: data.points, reward, found: true };
+  return {
+    points,
+    reward,
+    found: true,
+    gift: (data && typeof data === 'object' && 'gift' in data) ? (data as any).gift ?? null : null,
+    got_the_gift: (data && typeof data === 'object' && 'got_the_gift' in data) ? (data as any).got_the_gift ?? null : null
+  };
 }
 
-export async function registerLoyaltyVisit(phoneNumber: string, withPhoneNumber: boolean = true): Promise<{ points: number, reward?: string, alreadyVisitedToday?: boolean, isNewUser?: boolean }> {
-  // إذا لم يتم توفير رقم هاتف ولكن تم طلب النادل
-  if (!phoneNumber || phoneNumber.trim() === "") {
-    // إذا لم يتم توفير رقم هاتف، لا نعطي أي نقاط ولاء
-    return { points: 0, isNewUser: true };
+/**
+ * دالة منفصلة لتحديث عمود gift عند وصول النقاط إلى 10 أو 20 فقط
+ */
+export async function updateGiftForLoyaltyByUserId(userId: string, points: number) {
+  let gift = null;
+  if (points === 10) {
+    gift = "عصير مجاني";
+  } else if (points > 10 && points < 20) {
+    gift = "customerGiftIfThePointsMoreThanTen";
+  } else if (points === 20) {
+    gift = "خصم 20%";
+  } else if (points > 20) {
+    gift = "customerGiftIfThePointsMoreThanTwenty";
+  } else {
+    gift = null;
   }
-  
-  // تنظيف رقم الهاتف من أي أحرف غير رقمية
-  const cleanPhoneNumber = phoneNumber.replace(/\D/g, "");
-  
-  // جلب بيانات العميل من جدول الولاء
+  await supabase
+    .from("loyalty_visits")
+    .update({ gift })
+    .eq("user_id", userId);
+}
+
+/**
+ * دالة تقوم بمزامنة عمود gift مع النقاط لجميع العملاء
+ */
+export async function syncGiftWithPoints() {
   const { data, error } = await supabase
     .from("loyalty_visits")
-    .select("id,phone_number,points,last_visit,created_at,status")
-    .eq("phone_number", cleanPhoneNumber)
-    .single();
+    .select("id, user_id, points, gift");
+  if (error) {
+    console.error("Error fetching loyalty records for syncGiftWithPoints:", error);
+    return;
+  }
+  if (!data || data.length === 0) return;
+  for (const row of data) {
+    if (!row || typeof row !== 'object') continue;
+    const points = 'points' in row ? (row as any).points ?? 0 : 0;
+    const id = 'id' in row ? (row as any).id : null;
+    const gift = 'gift' in row ? (row as any).gift : null;
+    let correctGift = null;
+    if (points === 10) correctGift = "مشروب مجاني";
+    else if (points > 10 && points < 20) correctGift = "العميل كان له مشروب مجاني";
+    else if (points === 20) correctGift = "خصم 20%";
+    else if (points > 20) correctGift = "العميل كان له خصم 20%";
+    else correctGift = null;
+    if (gift !== correctGift && id) {
+      await supabase
+        .from("loyalty_visits")
+        .update({ gift: correctGift })
+        .eq("id", id);
+    }
+  }
+}
 
+// تسجيل زيارة جديدة بناءً على userId
+export async function registerLoyaltyVisitByUserId(userId: string, userName: string = ""): Promise<{ points: number, reward?: string, alreadyVisitedToday?: boolean, isNewUser?: boolean }> {
+  if (!userId) {
+    return { points: 0, isNewUser: true };
+  }
+  const { data, error } = await supabase
+    .from("loyalty_visits")
+    .select("id,user_id,points,last_visit,created_at,status")
+    .eq("user_id", userId)
+    .single();
   if (error && error.code !== "PGRST116") {
-    // خطأ غير "not found"
     throw error;
   }
-
-  // التحقق مما إذا كان المستخدم قد زار بالفعل اليوم
-  const today = new Date().toISOString().split('T')[0]; // الحصول على التاريخ الحالي بتنسيق YYYY-MM-DD
-  
+  const today = new Date().toISOString().split('T')[0];
   let points = 0;
   let reward;
   let alreadyVisitedToday = false;
   let isNewUser = false;
-
-  if (data) {
-    // التحقق مما إذا كانت آخر زيارة اليوم
-    const lastVisitDate = data.last_visit.split('T')[0];
+  if (data && typeof data === 'object' && 'points' in data) {
+    const lastVisitDate = (data as any).last_visit?.split('T')[0];
     alreadyVisitedToday = lastVisitDate === today;
-    
     if (alreadyVisitedToday) {
-      // إذا زار بالفعل اليوم، لا نضيف نقاط
-      points = data.points;
-    } else if (withPhoneNumber) {
-      // إذا لم يزر اليوم وقدم رقم هاتف، نضيف نقطة واحدة فقط
-      points = data.points + 1;
-      
+      points = (data as any).points ?? 0;
+    } else {
+      points = ((data as any).points ?? 0) + 1;
       await supabase
         .from("loyalty_visits")
         .update({ 
           points, 
-          last_visit: new Date().toISOString() 
+          last_visit: new Date().toISOString(),
+          user_name: userName,
         })
-        .eq("id", data.id);
-    } else {
-      // إذا لم يقدم رقم هاتف، لا نضيف نقاط
-      points = data.points;
+        .eq("id", (data as any).id);
+      if (points === 10 || points === 20) {
+        await updateGiftForLoyaltyByUserId(userId, points);
+      }
     }
-
-    // التحقق من المكافآت
     if (points === 20) {
-      reward = "special_discount";  // 20% discount
+      reward = "special_discount";
     } else if (points === 10) {
-      reward = "free_drink";  // Free drink
+      reward = "free_drink";
     }
   } else {
-    // إنشاء سجل جديد للعميل
     isNewUser = true;
-    points = withPhoneNumber ? 1 : 0; // نقطة واحدة للمستخدمين الجدد الذين يقدمون رقم هاتف
+    points = 1;
     const now = new Date().toISOString();
-    
+    const gift = points === 10 ? "عصير مجاني" : points === 20 ? "خصم 20%" : points > 20 ? "customerGiftIfThePointsMoreThanTwenty" : null;
     const { error: insertError } = await supabase
       .from("loyalty_visits")
       .insert([{ 
-        phone_number: cleanPhoneNumber, 
+        user_id: userId, 
+        user_name: userName,
+        phone_number: null,
         points, 
         last_visit: now,
         created_at: now,
-        status: 'active'
+        status: 'active',
+        gift
       }]);
-      
     if (insertError) {
       console.error("Error inserting loyalty visit:", insertError);
       throw insertError;
     }
+    if (points === 20) {
+      reward = "special_discount";
+    } else if (points === 10) {
+      reward = "free_drink";
+    }
   }
-
   return { points, reward, alreadyVisitedToday, isNewUser };
 }
 
-// Remove these lines (137-142):
-// import { createClient } from '@supabase/supabase-js';
-// 
-// const supabase = createClient(
-//   import.meta.env.VITE_SUPABASE_URL,
-//   import.meta.env.VITE_SUPABASE_ANON_KEY!
-// );
-
-// At the top of your file, add this import if it's not already there:
-import { supabase } from './client';
-
-export default async function handler(req: Request) {
-  try {
-    const { code, phone_number } = await req.json();
-
-    // 1. التحقق من الكود وصلاحيته
-    const { data: codeData, error: codeError } = await supabase
-      .from('daily_codes')
-      .select('*')
-      .eq('code', code)
-      .order('created_at', { ascending: false })
-      .limit(1);
-
-    if (codeError || !codeData || codeData.length === 0) {
-      return new Response(JSON.stringify({ success: false, message: 'الكود غير صالح' }), { status: 400 });
-    }
-
-    const dailyCode = codeData[0];
-    const now = new Date();
-    const validUntil = new Date(dailyCode.valid_until);
-    if (now > validUntil) {
-      return new Response(JSON.stringify({ success: false, message: 'انتهت صلاحية الكود' }), { status: 400 });
-    }
-
-    // 2. التحقق من أن المستخدم لم يحصل على نقطة اليوم
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const { data: visitData, error: visitError } = await supabase
-      .from('loyalty_visits')
-      .select('*')
-      .eq('phone_number', phone_number)
-      .gte('last_visit', today.toISOString())
-      .limit(1);
-
-    if (visitError) {
-      return new Response(JSON.stringify({ success: false, message: 'خطأ في التحقق من النقاط' }), { status: 500 });
-    }
-
-    if (visitData && visitData.length > 0) {
-      // المستخدم حصل على نقطة اليوم بالفعل
-      return new Response(JSON.stringify({
-        success: true,
-        alreadyVisitedToday: true,
-        points: visitData[0].points,
-        reward: getReward(visitData[0].points)
-      }), { status: 200 });
-    }
-
-    // 3. منح النقطة وتحديث قاعدة البيانات
-    // تحقق إذا كان للمستخدم سجل سابق
-    const { data: oldVisit, error: oldVisitError } = await supabase
-      .from('loyalty_visits')
-      .select('*')
-      .eq('phone_number', phone_number)
-      .limit(1);
-
-    let points = 1;
-    let reward = null;
-
-    if (oldVisit && oldVisit.length > 0) {
-      points = oldVisit[0].points + 1;
-      reward = getReward(points);
-
-      const { error: updateError } = await supabase
-        .from('loyalty_visits')
-        .update({ points, last_visit: now.toISOString() })
-        .eq('phone_number', phone_number);
-
-      if (updateError) {
-        return new Response(JSON.stringify({ success: false, message: 'خطأ في تحديث النقاط' }), { status: 500 });
-      }
-    } else {
-      // مستخدم جديد
-      const { error: insertError } = await supabase
-        .from('loyalty_visits')
-        .insert([{ phone_number, points: 1, last_visit: now.toISOString() }]);
-
-      if (insertError) {
-        return new Response(JSON.stringify({ success: false, message: 'خطأ في إضافة النقاط' }), { status: 500 });
-      }
-    }
-
-    // 4. إرجاع النتيجة فقط للواجهة الأمامية
-    return new Response(JSON.stringify({
-      success: true,
-      alreadyVisitedToday: false,
-      points,
-      reward
-    }), { status: 200 });
-
-  } catch (err) {
-    return new Response(JSON.stringify({ success: false, message: 'خطأ غير متوقع' }), { status: 500 });
-  }
-}
-
-// دالة مساعدة لحساب المكافأة
-function getReward(points: number) {
-  if (points === 10) return 'free_drink';
-  if (points === 20) return 'special_discount';
-  return null;
-}

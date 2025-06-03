@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,13 +11,15 @@ import { Label } from '@/components/ui/label';
 type VerificationStatus = 'idle' | 'loading' | 'success' | 'error';
 
 const VerificationCode: React.FC = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const table = new URLSearchParams(location.search).get("table");
+
   // متغيرات الحالة
   const [code, setCode] = useState<string>('');
   const [status, setStatus] = useState<VerificationStatus>('idle');
   const [statusMessage, setStatusMessage] = useState<string>('');
   const [verificationToken, setVerificationToken] = useState<string | null>(null);
-
-  const navigate = useNavigate();
 
   // تحقق عند تحميل الصفحة إذا كان هناك رمز تحقق صالح
   useEffect(() => {
@@ -35,7 +37,8 @@ const VerificationCode: React.FC = () => {
           tokenDate.getMonth() === now.getMonth() &&
           tokenDate.getDate() === now.getDate()
         ) {
-          navigate('/choose-table');
+          navigate('/user-home', { state: { verificationToken: token } });
+          setVerificationToken(token);
         } else {
           // إذا كان الرمز ليوم قديم، احذفه
           localStorage.removeItem('verificationToken');
@@ -43,6 +46,14 @@ const VerificationCode: React.FC = () => {
       }
     }
   }, [navigate]);
+
+  useEffect(() => {
+    if (!table) {
+      navigate("/user-home", { replace: true });
+      setStatus('error');
+      return;
+    }
+  }, [table, navigate]);
 
   // التعامل مع تغيير قيمة حقل الإدخال
   const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -157,6 +168,13 @@ const VerificationCode: React.FC = () => {
               </div>
             )}
           </form>
+          <Button
+            variant="ghost"
+            className="mb-6"
+            onClick={() => navigate(`/choose-table?table=${table}`)}
+          >
+            رجوع إلى اختيار الترابيزة
+          </Button>
         </CardContent>
       </Card>
     </div>

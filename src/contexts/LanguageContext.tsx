@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, useEffect } from "react";
 
 type Language = "en" | "ar";
@@ -6,7 +5,7 @@ type Language = "en" | "ar";
 // Language strings mapping
 export const translations = {
   en: {
-    welcome: "Welcome to Kian Restaurant & Café",
+    welcome: "Welcome to  Restaurant & Café",
     selectTable: "Please select your table number to begin",
     callWaiter: "Call a Waiter",
     viewMenu: "View Menu & Order",
@@ -55,7 +54,7 @@ export const translations = {
     failed: "Failed",
     failedToMarkAsComplete: "Failed to mark as complete",
     failedToMarkAsPending: "Failed to mark as pending",
-    failedToDelete: "Failed to delete", 
+    failedToDelete: "Failed to delete",
     failedToDeleteRequest: "Failed to delete request",
     failedToUpdateRequestStatus: "Failed to update request status",
     failedToLoadWaiterRequests: "Failed to load waiter requests",
@@ -113,9 +112,21 @@ export const translations = {
     pointPending: "Point Pending",
     pointRemoved: "Point Removed",
     pointRemovedFromCustomer: "Point Removed From Customer",
+    Agreeonthepoints: "Agree on the points?",
+    yes: "Yes",
+    no: "No",
+    newOrders: "New Orders",
+    generateDailyCode: "Generate Daily Code",
+    customerGiftIfThePointsMoreThanTen: "Customer was given (Free Drink)",
+    customerGiftIfThePointsMoreThanTwenty: "Customer was given (20% Discount)",
+    customerGiftIfThePointsMoreThanTenAndReceived: "Customer was given (Free Drink) and received the gift",
+    customerGiftIfThePointsMoreThanTenAndNotReceived: "Customer was given (Free Drink) and has not received the gift",
+    customerGiftIfThePointsMoreThanTwentyAndReceived: "Customer was given (20% Discount) and received the gift",
+    customerGiftIfThePointsMoreThanTwentyAndNotReceived: "Customer was given (20% Discount) and has not received the gift",
+    userName: "User Name",
   },
   ar: {
-    welcome: "مرحبًا بكم في مطعم وكافيه كيان  ",
+    welcome: "مرحبًا بكم في الكافيه الخاص بنا    ",
     selectTable: "يرجى تحديد رقم الطاولة الخاصة بك للبدء",
     callWaiter: "استدعاء النادل",
     viewMenu: "عرض القائمة والطلب",
@@ -222,7 +233,20 @@ export const translations = {
     pointPending: "النقاط في الانتظار",
     pointRemoved: "تم حذف النقاط",
     pointRemovedFromCustomer: "تم حذف النقاط من العميل",
-    
+    Agreeonthepoints: "هل توافق على النقاط؟",
+    yes: "نعم",
+    no: "لا",
+    newOrders: "طلبات جديدة",
+    generateDailyCode: "توليد كود يومي",
+    customerGiftIfThePointsMoreThanTen: "العميل كان له (مشروب مجاني)",
+    customerGiftIfThePointsMoreThanTwenty: "العميل كان له (خصم 20%)",
+    customerGiftIfThePointsMoreThanTenAndReceived: "العميل كان له (مشروب مجاني) وتم استلام الهدية",
+    customerGiftIfThePointsMoreThanTenAndNotReceived: "العميل كان له (مشروب مجاني) ولم يتم استلام الهدية",
+    customerGiftIfThePointsMoreThanTwentyAndReceived: "العميل كان له (خصم 20%) وتم استلام الهدية",
+    customerGiftIfThePointsMoreThanTwentyAndNotReceived: "العميل كان له (خصم 20%) ولم يتم استلام الهدية",
+    customerGiftIfThePointsArenTen:"العميل له مشروب مجاني",
+    customerGiftIfThePointsArenTwenty:"العميل له خصم 20%",
+    userName: "اسم المستخدم", 
   }
 };
 

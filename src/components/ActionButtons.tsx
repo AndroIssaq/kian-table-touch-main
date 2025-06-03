@@ -1,4 +1,3 @@
-
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
@@ -8,14 +7,16 @@ import { useLanguage } from "@/contexts/LanguageContext";
 
 interface ActionButtonsProps {
   selectedTable: number | null;
+  tableNumber?: string | number | null;
 }
 
-const ActionButtons = ({ selectedTable }: ActionButtonsProps) => {
+const ActionButtons = ({ selectedTable, tableNumber }: ActionButtonsProps) => {
   const navigate = useNavigate();
   const { t, language } = useLanguage();
+  const table = tableNumber || selectedTable;
   
   const handleAction = (action: 'call-waiter' | 'menu') => {
-    if (selectedTable === null) {
+    if (!table) {
       toast({
         title: t("tableRequired"),
         description: t("pleaseSelect"),
@@ -23,8 +24,7 @@ const ActionButtons = ({ selectedTable }: ActionButtonsProps) => {
       });
       return;
     }
-    
-    navigate(`/${action}?table=${selectedTable}`);
+    navigate(`/${action}?table=${table}`);
   };
   
   return (

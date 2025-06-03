@@ -1,5 +1,6 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
+import { useUser, SignedIn, SignedOut, RedirectToSignIn } from '@clerk/clerk-react';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -53,7 +54,16 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   }
 
   // السماح بعرض المحتوى إذا كان الرمز صالحاً
-  return <>{children}</>;
+  return (
+    <>
+      <SignedIn>
+        {children}
+      </SignedIn>
+      <SignedOut>
+        <RedirectToSignIn />
+      </SignedOut>
+    </>
+  );
 };
 
 export default ProtectedRoute;
