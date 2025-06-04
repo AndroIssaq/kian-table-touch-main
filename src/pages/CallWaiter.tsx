@@ -184,7 +184,7 @@ const CallWaiter = () => {
   return (
     <PageTransition>
       {/* Navbar حديث */}
-      <UserNavbar />
+      <UserNavbar cartCount={cart.length} />
       {/* تمت إزالة سلة الشراء (Cart) وزرها من صفحة CallWaiter */}
 
       <div className="cafe-container w-full mt-[100px]">

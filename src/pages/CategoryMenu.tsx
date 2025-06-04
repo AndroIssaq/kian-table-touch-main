@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import PageTransition from "@/components/PageTransition";
 import ThemeLanguageToggle from "@/components/ThemeLanguageToggle";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from '@/integrations/supabase/client';
 import { useEffect, useState } from "react";
 import { useUser } from '@clerk/clerk-react';
 import UserNavbar from '@/components/UserNavbar';
@@ -36,34 +36,21 @@ export default function CategoryMenu() {
   const { t, language } = useLanguage();
   const { user } = useUser();
   const { points, setPoints, refreshPoints } = useLoyaltyPoints();
-
-  // تحويل id إلى رقم صحيح لاستخدامه كمفتاح
   const numericId = Number(id);
   const catName = categoryNames[numericId as keyof typeof categoryNames]?.[language] || "";
-
-  // جلب الداتا من supabase
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // إضافة حالة للسلة
-  const [cartOpen, setCartOpen] = useState(false);
   const { addToCart, cart, clearCart } = useCart();
-
-  // إضافة حالة لعرض نافذة التأكيد
-  const [confirmLoyaltyDialog, setConfirmLoyaltyDialog] = useState<{ open: boolean, item: any | null }>({ open: false, item: null });
-
-  // إضافة حالتين جديدتين للتحكم في نافذة التأكيد والمنتج المختار
   const [confirmLoyaltyDialogOpen, setConfirmLoyaltyDialogOpen] = useState(false);
   const [selectedLoyaltyItem, setSelectedLoyaltyItem] = useState<any>(null);
-
-  // حالة جديدة للفاتورة (محملة من localStorage)
   const [invoice, setInvoice] = useState<any[]>(() => {
     const stored = localStorage.getItem("invoice");
     return stored ? JSON.parse(stored) : [];
   });
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
+  const [confirmOrderDialogOpen, setConfirmOrderDialogOpen] = useState(false);
+  const [selectedOrderItem, setSelectedOrderItem] = useState<any>(null);
 
-  // حفظ الفاتورة في localStorage عند كل تغيير
   useEffect(() => {
     localStorage.setItem("invoice", JSON.stringify(invoice));
   }, [invoice]);
@@ -75,7 +62,7 @@ export default function CategoryMenu() {
     }
     const fetchItems = async () => {
       setLoading(true);
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("items")
         .select("*")
         .eq("category_id", numericId)
@@ -93,61 +80,80 @@ export default function CategoryMenu() {
       setLoading(false);
     };
     if (numericId) fetchItems();
-  }, [numericId, language]);
+  }, [numericId, language, table, navigate]);
 
-  // جلب نقاط الولاء عند تحميل الصفحة أو تغيير المستخدم
   useEffect(() => {
     const fetchLoyaltyPoints = async () => {
       if (!user) return;
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('loyalty_visits')
         .select('points')
         .eq('user_id', user.id)
         .single();
-      if (!error && data) {
-        setPoints(data.points);
-      }
+      if (!error && data) setPoints(data.points);
     };
     fetchLoyaltyPoints();
-  }, [user]);
-
-  const handleOrder = (item: any) => {
-    addToCart({
-      name: item[`name_${language}`],
-      price: Number(item.price),
-      quantity: 1,
-    });
-    setCartOpen(true);
-    toast({
-      title: language === 'ar' ? 'تمت الإضافة للسلة' : 'Added to cart',
-      description: item[`name_${language}`],
-      duration: 2000,
-    });
-  };
+  }, [user, setPoints]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const table = params.get("table") || params.get("tableNumber");
-    if (!table) {
-      navigate("/choose-table");
-    }
+    if (!table) navigate("/choose-table");
   }, [location.search, navigate]);
 
-  // حذف عنصر واحد من السلة
-  const handleRemoveItem = (idx: number) => {
-    const newCart = [...cart];
-    newCart.splice(idx, 1);
-    // استخدم دالة clearCart ثم أضف العناصر المتبقية
-    clearCart();
-    newCart.forEach(item => addToCart(item));
+  const handleOrder = (item: any) => {
+    setSelectedOrderItem(item);
+    setConfirmOrderDialogOpen(true);
   };
 
-  // تأكيد الطلب وإرساله إلى supabase
+  const handleConfirmOrderDialog = async () => {
+    if (selectedOrderItem) {
+      // إضافة للفاتورة
+      setInvoice((prev: any[]) => [
+        ...prev,
+        {
+          name: selectedOrderItem[`name_${language}`],
+          quantity: 1,
+          type: 'cash',
+          price: Number(selectedOrderItem.price),
+          points: null,
+        }
+      ]);
+      // إرسال الطلب للويتر
+      try {
+        await supabase.from('waiter_requests').insert([
+          {
+            table_number: table,
+            request: `${selectedOrderItem[`name_${language}`]} x1`,
+            status: 'new',
+            created_at: new Date().toISOString(),
+            deleted: false,
+            user_id: user?.id,
+            user_name: user?.fullName || user?.username || user?.emailAddresses?.[0]?.emailAddress || '',
+          }
+        ]);
+        toast({
+          title: language === 'ar' ? 'تم إرسال الطلب' : 'Order sent',
+          description: language === 'ar' ? 'تم إرسال طلبك بنجاح وسيظهر للنادل.' : 'Your order has been sent and will appear to the staff.',
+          duration: 3000,
+        });
+      } catch (err) {
+        toast({
+          title: language === 'ar' ? 'خطأ' : 'Error',
+          description: language === 'ar' ? 'حدث خطأ أثناء إرسال الطلب.' : 'Failed to send order.',
+          variant: 'destructive',
+        });
+      }
+    }
+    setConfirmOrderDialogOpen(false);
+    setSelectedOrderItem(null);
+  };
+
   const handleConfirmOrder = async () => {
     if (!cart.length) return;
     try {
       for (const item of cart) {
-        await (supabase as any).from('waiter_requests').insert([
+        await supabase.from('waiter_requests').insert([
           {
             table_number: table,
             request: `${item.name} x${item.quantity}`,
@@ -158,7 +164,6 @@ export default function CategoryMenu() {
             user_name: user?.fullName || user?.username || user?.emailAddresses?.[0]?.emailAddress || '',
           }
         ]);
-        // أضف للفاتورة
         setInvoice((prev: any[]) => [
           ...prev,
           {
@@ -176,7 +181,6 @@ export default function CategoryMenu() {
         duration: 3000,
       });
       clearCart();
-      setCartOpen(false);
     } catch (err) {
       toast({
         title: language === 'ar' ? 'خطأ' : 'Error',
@@ -186,21 +190,17 @@ export default function CategoryMenu() {
     }
   };
 
-  // شراء المنتج بنقاط الولاء (يتم استدعاؤها فقط بعد التأكيد)
   const handleBuyWithPoints = async (item: any) => {
-    // استخدم اسم متغير مختلف لتفادي التعارض
-    const selectedItem = item;
-    if (!user || !selectedItem) return;
+    if (!user || !item) return;
     let userPoints = points;
     if (userPoints === null) {
       await refreshPoints();
       userPoints = points;
     }
-    // غير اسم المتغير هنا أيضاً
-    const { data: itemPointsData, error: itemError } = await (supabase as any)
+    const { data: itemPointsData, error: itemError } = await supabase
       .from('items')
       .select('points')
-      .eq('id', selectedItem.id)
+      .eq('id', item.id)
       .single();
     if (itemError || !itemPointsData) {
       toast({
@@ -208,7 +208,8 @@ export default function CategoryMenu() {
         description: language === 'ar' ? 'تعذر جلب نقاط المنتج.' : 'Failed to fetch item points.',
         variant: 'destructive',
       });
-      setConfirmLoyaltyDialog({ open: false, item: null });
+      setConfirmLoyaltyDialogOpen(false);
+      setSelectedLoyaltyItem(null);
       return;
     }
     const itemPoints = itemPointsData.points || 0;
@@ -218,10 +219,11 @@ export default function CategoryMenu() {
         description: language === 'ar' ? 'نقاط الولاء لا تكفي لشراء هذا المنتج.' : 'You do not have enough loyalty points to buy this item.',
         variant: 'destructive',
       });
-      setConfirmLoyaltyDialog({ open: false, item: null });
+      setConfirmLoyaltyDialogOpen(false);
+      setSelectedLoyaltyItem(null);
       return;
     }
-    const { error: updateError } = await (supabase as any)
+    const { error: updateError } = await supabase
       .from('loyalty_visits')
       .update({ points: userPoints - itemPoints })
       .eq('user_id', user.id);
@@ -231,15 +233,15 @@ export default function CategoryMenu() {
         description: language === 'ar' ? 'حدث خطأ أثناء خصم النقاط.' : 'Failed to deduct points.',
         variant: 'destructive',
       });
-      setConfirmLoyaltyDialog({ open: false, item: null });
+      setConfirmLoyaltyDialogOpen(false);
+      setSelectedLoyaltyItem(null);
       return;
     }
     setPoints(userPoints - itemPoints);
-    // أضف للفاتورة
     setInvoice((prev: any[]) => [
       ...prev,
       {
-        name: selectedItem[`name_${language}`],
+        name: item[`name_${language}`],
         quantity: 1,
         type: 'loyalty',
         price: 0,
@@ -250,7 +252,7 @@ export default function CategoryMenu() {
     const { error: insertError } = await supabase.from('waiter_requests').insert([
       {
         table_number: table,
-        request: `${selectedItem[`name_${language}`]} (شراء بنقاط الولاء)`,
+        request: `${item[`name_${language}`]} (شراء بنقاط الولاء)`,
         status: 'new',
         created_at: new Date().toISOString(),
         deleted: false,
@@ -264,7 +266,8 @@ export default function CategoryMenu() {
         description: language === 'ar' ? 'تم خصم النقاط لكن حدث خطأ في تسجيل الطلب.' : 'Points deducted but failed to register order.',
         variant: 'destructive',
       });
-      setConfirmLoyaltyDialog({ open: false, item: null });
+      setConfirmLoyaltyDialogOpen(false);
+      setSelectedLoyaltyItem(null);
       return;
     }
     toast({
@@ -272,26 +275,20 @@ export default function CategoryMenu() {
       description: language === 'ar' ? `تم خصم ${itemPoints} نقطة من رصيدك.` : `${itemPoints} points have been deducted from your balance.`,
       duration: 3000,
     });
-    setConfirmLoyaltyDialog({ open: false, item: null });
+    setConfirmLoyaltyDialogOpen(false);
+    setSelectedLoyaltyItem(null);
   };
 
-  const handleOpenLoyaltyDialog = (item: any) => {
-    setSelectedLoyaltyItem(item);
-    setConfirmLoyaltyDialogOpen(true);
-  };
-
-  // زر "تم الدفع" لمسح الفاتورة وإغلاق النافذة
   const handleClearInvoice = () => {
     setInvoice([]);
     localStorage.removeItem("invoice");
     setInvoiceDialogOpen(false);
   };
 
-  // زر الفاتورة العائم الموحد
   const InvoiceFloatingButton = ({ onClick }: { onClick: () => void }) => (
     <button
       onClick={onClick}
-      className="fixed bottom-6 right-6 z-[100] flex items-center gap-2 px-5 py-3 rounded-full shadow-2xl bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 text-kian-burgundy font-extrabold text-lg border-2 border-yellow-600 transition-all duration-200 hover:scale-105"
+      className="fixed bottom-6 right-6 z-[50] flex items-center gap-2 px-5 py-3 rounded-full shadow-2xl bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 text-kian-burgundy font-extrabold text-lg border-2 border-yellow-600 transition-all duration-200 hover:scale-105"
       style={{ boxShadow: '0 8px 32px 0 rgba(255, 193, 7, 0.25)' }}
       aria-label="عرض الفاتورة"
     >
@@ -307,7 +304,6 @@ export default function CategoryMenu() {
   return (
     <PageTransition>
       <UserNavbar cartCount={cart.length} />
-      {/* تمت إزالة سلة الشراء (Cart) وزرها من صفحة تصنيفات المنيو */}
       {/* نافذة تأكيد شراء المنتج بنقاط الولاء */}
       <Dialog open={confirmLoyaltyDialogOpen} onOpenChange={setConfirmLoyaltyDialogOpen}>
         <DialogContent className="max-w-sm w-full rounded-2xl shadow-2xl">
@@ -338,8 +334,6 @@ export default function CategoryMenu() {
                 if (selectedLoyaltyItem) {
                   await handleBuyWithPoints(selectedLoyaltyItem);
                 }
-                setConfirmLoyaltyDialogOpen(false);
-                setSelectedLoyaltyItem(null);
               }}
             >
               {language === 'ar' ? 'تأكيد الشراء' : 'Confirm Purchase'}
@@ -347,7 +341,43 @@ export default function CategoryMenu() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {/* زر الفاتورة العائم الموحد */}
+      {/* نافذة تأكيد شراء المنتج نقدي (طلب عادي) */}
+      <Dialog open={confirmOrderDialogOpen} onOpenChange={setConfirmOrderDialogOpen}>
+        <DialogContent className="max-w-sm w-full rounded-2xl shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-yellow-700 dark:text-yellow-300">
+              {language === 'ar' ? 'تأكيد إرسال الطلب' : 'Confirm Order'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="text-center text-base mb-4">
+            {selectedOrderItem && (
+              <>
+                {language === 'ar'
+                  ? `هل أنت متأكد من طلبك لشراء "${selectedOrderItem[`name_ar`]}"؟ سيتم إرسال الطلب للنادل.`
+                  : `Are you sure you want to order "${selectedOrderItem[`name_en`]}"? The order will be sent to the waiter.`}
+              </>
+            )}
+          </div>
+          <DialogFooter className="flex gap-2 justify-center">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setConfirmOrderDialogOpen(false);
+                setSelectedOrderItem(null);
+              }}
+            >
+              {language === 'ar' ? 'إلغاء' : 'Cancel'}
+            </Button>
+            <Button
+              className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold"
+              onClick={handleConfirmOrderDialog}
+            >
+              {language === 'ar' ? 'تأكيد الطلب' : 'Confirm Order'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* زر الفاتورة العائم */}
       <InvoiceFloatingButton onClick={() => setInvoiceDialogOpen(true)} />
       {/* نافذة الفاتورة */}
       <Dialog open={invoiceDialogOpen} onOpenChange={setInvoiceDialogOpen}>
@@ -385,11 +415,9 @@ export default function CategoryMenu() {
               </tbody>
             </table>
           </div>
-          {/* الإجمالي */}
           <div className="mt-4 text-lg font-bold text-right">
             {language === 'ar' ? 'الإجمالي المطلوب دفعه:' : 'Total to Pay:'} {invoice.filter(i => i.type === 'cash').reduce((sum, i) => sum + (i.price * i.quantity), 0)} EGP
           </div>
-          {/* زر تم الدفع */}
           <div className="flex justify-center mt-6">
             <Button className="bg-green-600 hover:bg-green-700 text-white font-bold px-8 py-2 rounded-full" onClick={handleClearInvoice}>
               {language === 'ar' ? 'تم الدفع' : 'Paid'}
@@ -397,7 +425,6 @@ export default function CategoryMenu() {
           </div>
         </DialogContent>
       </Dialog>
-      {/* زر الرجوع الصغير أعلى الصفحة */}
       <button
         onClick={() => navigate(-1)}
         className="fixed top-6 left-6 z-[100] w-10 h-10 flex items-center justify-center rounded-full shadow bg-gray-100 hover:bg-gray-200 border border-gray-300 transition-all duration-150 hidden sm:flex"
@@ -409,7 +436,6 @@ export default function CategoryMenu() {
       <div className="cafe-container">
         <div className="mb-6 flex justify-between items-center">
           <ThemeLanguageToggle />
-         
         </div>
         <h1 className="text-3xl md:text-4xl font-extrabold mb-2 text-center bg-gradient-to-r from-kian-burgundy via-gold to-[#494848] bg-clip-text text-transparent drop-shadow-lg">
           {catName}
@@ -417,7 +443,6 @@ export default function CategoryMenu() {
         <p className="text-center text-kian-charcoal/80 dark:text-kian-sand/80 mb-8">
           {t("table")} {table}
         </p>
-        {/* عرض نقاط الولاء */}
         <div className="flex justify-end items-center gap-2 mb-2">
           <span className="font-bold text-yellow-700 dark:text-yellow-300">
             {language === 'ar' ? 'نقاطك:' : 'Your Points:'} {points ?? '--'}
@@ -457,13 +482,16 @@ export default function CategoryMenu() {
                   </div>
                 )}
                 <Button variant="outline" className="w-full mt-auto" onClick={() => handleOrder(item)}>
-                  {language === "ar" ? "أضف للسلة" : "Add to cart"}
+                  {language === "ar" ? "شراء  " : "Order Normally"}
                 </Button>
                 <Button
                   variant="secondary"
                   className="w-full mt-2 text-wrap text bg-yellow-100 hover:bg-yellow-200 text-yellow-800 font-semibold text-xs border border-yellow-300 px-2 py-1 md:text-sm md:px-4 md:py-2 transition-all duration-200"
                   disabled={!item.points || item.points <= 0}
-                  onClick={() => handleOpenLoyaltyDialog(item)}
+                  onClick={() => {
+                    setSelectedLoyaltyItem(item);
+                    setConfirmLoyaltyDialogOpen(true);
+                  }}
                 >
                   {language === "ar"
                     ? `اشتري بنقاط الولاء (${item.points ?? 0} نقطة)`

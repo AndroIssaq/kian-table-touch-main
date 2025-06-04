@@ -1,22 +1,21 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useUser } from "@clerk/clerk-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Coffee, Wifi, Gift, Music, Mic, ArrowLeft, Receipt, Bell, ReceiptText } from "lucide-react";
+import { Coffee, Wifi, Gift, Music, Receipt, Bell, ReceiptText } from "lucide-react";
 import { UserNavbar } from "@/components/UserNavbar";
-import cafeCup from "/placeholder.svg"; // Replace with real image
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Pagination } from 'swiper/modules';
 import { Autoplay } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/pagination';
 import { createClient } from "@supabase/supabase-js";
-import { useCart } from '@/contexts/CartContext';
 import { useToast } from "@/components/ui/use-toast";
-  
+import DrinkRecomaindationSystem from "./drinkRecomaindationSystem";
+
 const sectionVariants = {
   hidden: { opacity: 0, y: 20 },
   visible: (i: number) => ({
@@ -25,7 +24,6 @@ const sectionVariants = {
     transition: { delay: i * 0.13, duration: 0.5, type: "spring", stiffness: 60 },
   }),
 };
-
 
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL!,
@@ -36,179 +34,19 @@ const UserHome = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useUser();
-  const { t, language } = useLanguage();
+  const { language } = useLanguage();
   const { toast } = useToast();
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
+  const params = new URLSearchParams(location.search);
+  const table = params.get("table");
 
   // Enforce table number in URL
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const table = params.get("table") || params.get("tableNumber");
-    if (!table) {
-      navigate("/choose-table");
-    }
+    if (!table) navigate("/choose-table");
   }, [location.search, navigate]);
-
-  const params = new URLSearchParams(location.search);
-  const table = params.get("table");
-
-  // Dummy previous orders/favorites
-  const previousOrders = user ? [
-    { name: "لاتيه مثلج", image: cafeCup },
-    { name: "شاي مغربي", image: cafeCup },
-    { name: "قهوة تركي", image: cafeCup },
-  ] : [];
-
-  // Language helpers
-  const isAr = language === 'ar';
-  const tSection = {
-    startOrder: isAr ? 'ابدأ تصفح المنيو' : 'Start Browsing Menu',
-    startOrderDesc: isAr ? 'اطلب أكلك أو مشروبك المفضل بسهولة' : 'Order your favorite food or drink easily',
-    prevOrders: isAr ? 'الطلبات السابقة' : 'Previous Orders',
-    noPrevOrders: isAr ? 'لا يوجد طلبات سابقة' : 'No previous orders',
-    music: isAr ? 'هل تود سماع الموسيقى اثناء انتظار طلبك ؟' : 'Would you like to listen to music while you wait?',
-    playMusic: isAr ? 'تشغيل الموسيقى' : 'Play Music',
-    todayOffers: isAr ? 'عروض النهاردة' : 'Today’s Offers',
-    wifi: isAr ? 'احصل على واي فاي مجاني' : 'Get Free Wi-Fi',
-    copyWifi: isAr ? 'نسخ كلمة السر' : 'Copy Password',
-    wifiPass: isAr ? 'كلمة السر: CafeWifi2025' : 'Password: CafeWifi2025',
-    suggestions: isAr ? 'مقترحات لك' : 'Suggestions for you',
-    waiter: isAr ? 'نداء سريع للنادل' : 'Call Waiter',
-    bill: isAr ? 'طلب الفاتورة / تيك أواي' : 'Request Bill / Takeaway',
-  };
-  // عروض اليوم (ثنائي اللغة)
-  const slides = [
-    {
-      emoji: "🥤",
-      title: {
-        ar: "خصم 10% على كل المشروبات",
-        en: "10% off all drinks",
-      },
-      desc: {
-        ar: "ساري اليوم فقط",
-        en: "Valid today only",
-      },
-    },
-    {
-      emoji: "🎁",
-      title: {
-        ar: "مشروب مجاني عند كل 5 طلبات",
-        en: "Free drink with every 5 orders",
-      },
-      desc: {
-        ar: "اسأل عن نقاط الولاء",
-        en: "Ask about loyalty points",
-      },
-    },
-    {
-      emoji: "☕",
-      title: {
-        ar: "عرض خاص على القهوة التركي",
-        en: "Special offer on Turkish coffee",
-      },
-      desc: {
-        ar: "جربها اليوم بسعر مميز",
-        en: "Try it today at a special price",
-      },
-    },
-    {
-      emoji: "🍪",
-      title: {
-        ar: "كوكيز مجاني مع كل مشروب ساخن",
-        en: "Free cookie with every hot drink",
-      },
-      desc: {
-        ar: "لفترة محدودة",
-        en: "For a limited time",
-      },
-    },
-    {
-      emoji: "🍰",
-      title: {
-        ar: "خصم 20% على جميع الحلويات",
-        en: "20% off all desserts",
-      },
-      desc: {
-        ar: "جرب التشيز كيك اليوم",
-        en: "Try the cheesecake today",
-      },
-    },
-    {
-      emoji: "🧋",
-      title: {
-        ar: "مشروب بوبا جديد!",
-        en: "New Boba drink!",
-      },
-      desc: {
-        ar: "نكهات متعددة متوفرة",
-        en: "Multiple flavors available",
-      },
-    },
-    {
-      emoji: "🥗",
-      title: {
-        ar: "سلطة فريش مجانية مع كل وجبة",
-        en: "Free fresh salad with every meal",
-      },
-      desc: {
-        ar: "صحية وخفيفة",
-        en: "Healthy and light",
-      },
-    },
-    {
-      emoji: "🎶",
-      title: {
-        ar: "حفلة موسيقية مباشرة الليلة",
-        en: "Live music party tonight",
-      },
-      desc: {
-        ar: "ابدأ السهرة مع أصدقائك!",
-        en: "Start the night with your friends!",
-      },
-    },
-    {
-      emoji: "🧁",
-      title: {
-        ar: "كاب كيك مجاني للأطفال",
-        en: "Free cupcake for kids",
-      },
-      desc: {
-        ar: "كل يوم جمعة وسبت",
-        en: "Every Friday and Saturday",
-      },
-    },
-    {
-      emoji: "☀️",
-      title: {
-        ar: "خصم خاص للفطار المبكر",
-        en: "Special discount for early breakfast",
-      },
-      desc: {
-        ar: "من 8 صباحًا حتى 11 صباحًا",
-        en: "From 8am to 11am",
-      },
-    },
-  ];
-
-  // اقتراحات (ثنائي اللغة)
-  const suggestions = [
-    {
-      emoji: "🍰",
-      title: { ar: "جرب التشيز كيك مع القهوة", en: "Try cheesecake with coffee" },
-      desc: { ar: "طبق اليوم المميز", en: "Today's special dish" },
-    },
-    {
-      emoji: "🧋",
-      title: { ar: "جرب مشروب البوبا الجديد", en: "Try the new Boba drink" },
-      desc: { ar: "نكهات متعددة", en: "Multiple flavors" },
-    },
-    {
-      emoji: "🥗",
-      title: { ar: "سلطة فريش مع كل وجبة", en: "Fresh salad with every meal" },
-      desc: { ar: "صحية وخفيفة", en: "Healthy and light" },
-    },
-  ];
 
   useEffect(() => {
     const fetchRecentOrders = async () => {
@@ -219,18 +57,36 @@ const UserHome = () => {
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
       if (!error && data) {
-        // Filter out rows where request contains 'لا توجد طلبات سابقة' أو 'لا يوجد طلب محدد'
         const filtered = data.filter((order: any) => {
           const req = order.request?.trim();
-          return req &&
-            !req.includes('لا توجد طلبات سابقة') &&
-            !req.includes('لا يوجد طلب محدد');
+          return req && !req.includes('لا توجد طلبات سابقة') && !req.includes('لا يوجد طلب محدد');
         }).slice(0, 3);
         setRecentOrders(filtered);
       }
     };
     fetchRecentOrders();
   }, [user?.id]);
+
+  // عروض اليوم (ثنائي اللغة)
+  const slides = [
+    { emoji: "🥤", title: { ar: "خصم 10% على كل المشروبات", en: "10% off all drinks" }, desc: { ar: "ساري اليوم فقط", en: "Valid today only" } },
+    { emoji: "🎁", title: { ar: "مشروب مجاني عند كل 5 طلبات", en: "Free drink with every 5 orders" }, desc: { ar: "اسأل عن نقاط الولاء", en: "Ask about loyalty points" } },
+    { emoji: "☕", title: { ar: "عرض خاص على القهوة التركي", en: "Special offer on Turkish coffee" }, desc: { ar: "جربها اليوم بسعر مميز", en: "Try it today at a special price" } },
+    { emoji: "🍪", title: { ar: "كوكيز مجاني مع كل مشروب ساخن", en: "Free cookie with every hot drink" }, desc: { ar: "لفترة محدودة", en: "For a limited time" } },
+    { emoji: "🍰", title: { ar: "خصم 20% على جميع الحلويات", en: "20% off all desserts" }, desc: { ar: "جرب التشيز كيك اليوم", en: "Try the cheesecake today" } },
+    { emoji: "🧋", title: { ar: "مشروب بوبا جديد!", en: "New Boba drink!" }, desc: { ar: "نكهات متعددة متوفرة", en: "Multiple flavors available" } },
+    { emoji: "🥗", title: { ar: "سلطة فريش مجانية مع كل وجبة", en: "Free fresh salad with every meal" }, desc: { ar: "صحية وخفيفة", en: "Healthy and light" } },
+    { emoji: "🎶", title: { ar: "حفلة موسيقية مباشرة الليلة", en: "Live music party tonight" }, desc: { ar: "ابدأ السهرة مع أصدقائك!", en: "Start the night with your friends!" } },
+    { emoji: "🧁", title: { ar: "كاب كيك مجاني للأطفال", en: "Free cupcake for kids" }, desc: { ar: "كل يوم جمعة وسبت", en: "Every Friday and Saturday" } },
+    { emoji: "☀️", title: { ar: "خصم خاص للفطار المبكر", en: "Special discount for early breakfast" }, desc: { ar: "من 8 صباحًا حتى 11 صباحًا", en: "From 8am to 11am" } },
+  ];
+
+  // اقتراحات (ثنائي اللغة)
+  const suggestions = [
+    { emoji: "🍰", title: { ar: "جرب التشيز كيك مع القهوة", en: "Try cheesecake with coffee" }, desc: { ar: "طبق اليوم المميز", en: "Today's special dish" } },
+    { emoji: "🧋", title: { ar: "جرب مشروب البوبا الجديد", en: "Try the new Boba drink" }, desc: { ar: "نكهات متعددة", en: "Multiple flavors" } },
+    { emoji: "🥗", title: { ar: "سلطة فريش مع كل وجبة", en: "Fresh salad with every meal" }, desc: { ar: "صحية وخفيفة", en: "Healthy and light" } },
+  ];
 
   // حالة الفاتورة (محملة من localStorage)
   const [invoice, setInvoice] = useState<any[]>(() => {
@@ -254,10 +110,30 @@ const UserHome = () => {
     </button>
   );
 
+  // إعادة تحميل الفاتورة من localStorage عند فتح نافذة الفاتورة
+  useEffect(() => {
+    if (invoiceDialogOpen) {
+      const stored = localStorage.getItem("invoice");
+      setInvoice(stored ? JSON.parse(stored) : []);
+    }
+  }, [invoiceDialogOpen]);
+
+  // تحديث الفاتورة فوراً عند أي تغيير في localStorage (حتى من صفحات أخرى)
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "invoice") {
+        const stored = localStorage.getItem("invoice");
+        setInvoice(stored ? JSON.parse(stored) : []);
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
   // زر "تم الدفع" لمسح الفاتورة وإغلاق النافذة
   const handleClearInvoice = () => {
     setInvoice([]);
-    localStorage.removeItem("invoice");
+    localStorage.setItem("invoice", JSON.stringify([]));
     setInvoiceDialogOpen(false);
   };
 
@@ -352,16 +228,98 @@ const UserHome = () => {
     window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
   }, [location.pathname]);
 
+  // --- Golden Impression Animation State ---
+  const [showWelcome, setShowWelcome] = useState(() => {
+    // تظهر فقط إذا لم يتم عرضها من قبل
+    return !localStorage.getItem('welcomeShown');
+  });
+  useEffect(() => {
+    if (showWelcome) {
+      const timer = setTimeout(() => {
+        setShowWelcome(false);
+        localStorage.setItem('welcomeShown', 'true');
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [showWelcome]);
+  const userName = user?.firstName || user?.username || user?.emailAddresses?.[0]?.emailAddress || "ضيف";
+
   return (
     <div
-      className="min-h-screen mt-[80px] bg-gradient-to-br from-[#fff8f0] via-[#f9f6ff] to-[#e8eaf6] dark:from-[#23243a] dark:via-[#181a20] dark:to-[#23243a] relative pb-32"
+      className="min-h-screen  bg-gradient-to-br from-[#fff8f0] via-[#f9f6ff] to-[#e8eaf6] dark:from-[#23243a] dark:via-[#181a20] dark:to-[#23243a] relative pb-32"
       dir={language === 'ar' ? 'rtl' : 'ltr'}
       onClick={() => invoiceDialogOpen && setInvoiceDialogOpen(false)}
       style={{ cursor: invoiceDialogOpen ? 'pointer' : undefined }}
     >
+      {/* Golden Welcome Animation */}
+      <AnimatePresence>
+        {showWelcome && (
+          <motion.div
+            key="golden-welcome"
+            initial={{ opacity: 0, scale: 0.7, y: 60 }}
+            animate={{ opacity: 1, scale: 1, y: 0, filter: 'drop-shadow(0 0 40px #FFD700cc)' }}
+            exit={{ opacity: 0, scale: 0.7, y: -60 }}
+            transition={{ duration: 0.9, type: 'spring', bounce: 0.32 }}
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-transparent pointer-events-none"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8, y: 40 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.8, y: -40 }}
+              transition={{ duration: 0.7, type: 'spring', bounce: 0.3, delay: 0.1 }}
+              className="bg-white/90 dark:bg-[#23243ad9] rounded-3xl shadow-2xl border-2 border-yellow-200 px-8 py-10 sm:px-14 sm:py-12 flex flex-col items-center max-w-[95vw] w-full sm:w-[420px] pointer-events-auto"
+            >
+              {/* Golden steam animation */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: -30 }}
+                transition={{ duration: 1.2, delay: 0.5, repeat: Infinity, repeatType: 'reverse', ease: 'easeInOut' }}
+                className="absolute left-1/2 -translate-x-1/2 -top-8"
+              >
+                <svg width="40" height="60" viewBox="0 0 40 60" fill="none">
+                  <path d="M20 50 Q22 40 18 30 Q16 25 20 20" stroke="#FFD700" strokeWidth="3" strokeLinecap="round" fill="none"/>
+                </svg>
+              </motion.div>
+              <span className="inline-block text-[70px] sm:text-[90px] animate-bounce-slow drop-shadow-2xl select-none mb-2">☕</span>
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4, duration: 0.7, type: 'spring', bounce: 0.3 }}
+                className="text-2xl sm:text-3xl font-extrabold text-kian-burgundy dark:text-gold text-center mb-2 flex items-center gap-2"
+              >
+                <motion.span
+                  initial={{ x: -30, opacity: 0, rotate: -10 }}
+                  animate={{ x: 0, opacity: 1, rotate: 0 }}
+                  transition={{ delay: 0.7, duration: 0.5, type: 'spring', bounce: 0.4 }}
+                  className="inline-block text-3xl sm:text-4xl"
+                  role="img"
+                  aria-label="wave"
+                >👋</motion.span>
+                <span className="bg-gradient-to-r from-yellow-500 via-yellow-400 to-yellow-200 bg-clip-text text-transparent drop-shadow-lg dark:text-yellow-200 dark:bg-none dark:bg-none dark:drop-shadow-lg" style={{ WebkitTextStroke: '0.5px #a67c00', textShadow: '0 2px 8px #fffbe7, 0 1px 0 #a67c00' }}>
+                  {language === 'ar'
+                    ? `أهلاً بيك يا ${userName} 👑`
+                    : `Welcome, ${userName} 👑`}
+                </span>
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 1, duration: 0.7, type: 'spring', bounce: 0.25 }}
+                className="text-base sm:text-lg font-bold mt-2 drop-shadow text-center text-yellow-800 dark:text-yellow-200"
+                style={{ textShadow: '0 2px 8px #fffbe7, 0 1px 0 #a67c00' }}
+              >
+                {language === 'ar'
+                  ? 'نتمنى لك تجربة ذهبية في مثال كافيه'
+                  : 'Wishing you a golden experience at Kayan Cafe!'}
+              </motion.div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <UserNavbar cartCount={0} />
       
-      <div className="max-w-lg w-full mx-auto px-2 sm:px-4 pt-4 sm:pt-6 space-y-5 sm:space-y-6">
+      <div className="max-w-lg w-full  mx-auto px-2 sm:px-4 pt-4 sm:pt-6 space-y-5 sm:space-y-6">
         {/* Section 1: Start Order */}
         <motion.div
           className="w-full"
@@ -370,7 +328,7 @@ const UserHome = () => {
           animate="visible"
           custom={0}
         >
-          <Card className="w-full flex items-center gap-3 sm:gap-4 p-4 sm:p-6 rounded-2xl shadow-xl bg-gradient-to-r from-gold/90 to-yellow-200 cursor-pointer hover:scale-[1.03] transition-transform"
+          <Card className="w-full mt-[80px] flex items-center gap-3 sm:gap-4 p-4 sm:p-6 rounded-2xl shadow-xl bg-gradient-to-r from-gold/90 to-yellow-200 cursor-pointer hover:scale-[1.03] transition-transform"
             onClick={() => navigate(`/Menu?table=${table}`)}
           >
             <span className="text-2xl sm:text-3xl">🍽️</span>
@@ -413,7 +371,15 @@ const UserHome = () => {
             </div>
           </motion.div>
         )}
-
+  {/* Section: Drink Recommendation System */}
+        <motion.div
+          variants={sectionVariants}
+          initial="hidden"
+          animate="visible"
+          custom={6}
+        >
+          <DrinkRecomaindationSystem />
+        </motion.div>
         {/* Section 3: Music Offer */}
         <motion.div
           variants={sectionVariants}
@@ -553,6 +519,8 @@ const UserHome = () => {
             ))}
           </div>
         </motion.div>
+
+      
       </div>
 
       {/* Sticky Action Buttons */}
@@ -588,9 +556,9 @@ const UserHome = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={e => e.stopPropagation()}
+            onClick={() => setInvoiceDialogOpen(false)} // Close dialog when clicking overlay
           >
-            <Card className="w-full max-w-md p-6 rounded-2xl shadow-xl bg-white dark:bg-kian-charcoal">
+            <Card className="w-full max-w-md p-6 rounded-2xl shadow-xl bg-white dark:bg-kian-charcoal" onClick={e => e.stopPropagation()}>
               <div className="flex justify-between items-center mb-4">
                 <div className="text-lg font-bold text-kian-burgundy">
                   {language === 'ar' ? 'فاتورة المشتريات' : 'Purchase Invoice'}
@@ -644,7 +612,7 @@ const UserHome = () => {
             </Card>
           </motion.div>
         )}
-      </AnimatePresence> 
+      </AnimatePresence>
     </div>
   );
 };

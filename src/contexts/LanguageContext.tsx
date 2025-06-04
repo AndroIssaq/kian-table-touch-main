@@ -11,7 +11,7 @@ export const translations = {
     viewMenu: "View Menu & Order",
     tableSelected: "You selected Table",
     back: "Back",
-    restaurantMenu: "Kian Restaurant & Café Menu",
+    restaurantMenu: " Restaurant & Café Menu",
     table: "Table",
     menuContent: "Menu content will be implemented in the next version.",
     menuDescription: "This section will include categories, items, and ordering functionality.",
@@ -124,6 +124,7 @@ export const translations = {
     customerGiftIfThePointsMoreThanTwentyAndReceived: "Customer was given (20% Discount) and received the gift",
     customerGiftIfThePointsMoreThanTwentyAndNotReceived: "Customer was given (20% Discount) and has not received the gift",
     userName: "User Name",
+    userHome: " Home Page ",
   },
   ar: {
     welcome: "مرحبًا بكم في الكافيه الخاص بنا    ",
@@ -132,7 +133,7 @@ export const translations = {
     viewMenu: "عرض القائمة والطلب",
     tableSelected: "لقد اخترت الطاولة رقم",
     back: "رجوع",
-    restaurantMenu: "قائمة كيان مطعم ومقهى",
+    restaurantMenu: "قائمة الطعام",
     table: "طاولة",
     menuContent: "سيتم تنفيذ محتوى القائمة في الإصدار التالي.",
     menuDescription: "سيتضمن هذا القسم الفئات والعناصر ووظائف الطلب.",
@@ -247,6 +248,7 @@ export const translations = {
     customerGiftIfThePointsArenTen:"العميل له مشروب مجاني",
     customerGiftIfThePointsArenTwenty:"العميل له خصم 20%",
     userName: "اسم المستخدم", 
+    userHome: "الصفحة الرئيسية ",
   }
 };
 

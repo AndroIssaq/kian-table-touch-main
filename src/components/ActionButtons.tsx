@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { Phone, Menu } from "lucide-react";
+import { Home, Menu } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -15,7 +15,7 @@ const ActionButtons = ({ selectedTable, tableNumber }: ActionButtonsProps) => {
   const { t, language } = useLanguage();
   const table = tableNumber || selectedTable;
   
-  const handleAction = (action: 'call-waiter' | 'menu') => {
+  const handleAction = (action: 'user-home' | 'menu') => {
     if (!table) {
       toast({
         title: t("tableRequired"),
@@ -38,10 +38,10 @@ const ActionButtons = ({ selectedTable, tableNumber }: ActionButtonsProps) => {
       <div className="fixed bottom-[5%] xl:w-[50%] lg:w-[50%] md:w-[50%] sm:w-[90%] w-[90%] flex-col items-center justify-center space-y-4 mt-6">
         <Button 
           className="action-button w-full bg-black hover:bg-black/90 dark:bg-gold dark:hover:bg-gold/90 dark:text-black h-16 text-lg text-white"
-          onClick={() => handleAction('call-waiter')}
+          onClick={() => handleAction('user-home')}
         >
-          <Phone className={`${language === "ar" ? "ml-2" : "mr-2"} h-5 w-5`} />
-          {t("callWaiter")}
+          <Home className={`${language === "ar" ? "ml-2" : "mr-2"} h-5 w-5`} />
+          {t("userHome")}
         </Button>
         
         <Button 
