@@ -99,7 +99,7 @@ export function UserNavbar({
               </span>
             </div>
             <div className="mt-4 w-full flex justify-center">
-              <SignOutButton>
+              <SignOutButton afterSignOutUrl="/signin">
                 <button className="px-7 py-2 rounded-full bg-red-500 hover:bg-red-600 text-white font-bold shadow transition text-lg">تسجيل الخروج</button>
               </SignOutButton>
             </div>

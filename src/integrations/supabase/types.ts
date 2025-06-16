@@ -17,7 +17,6 @@ export type Database = {
           last_visit: string
           created_at: string
           status?: string
-          gift?: string
         }
         Insert: {
           id?: string
@@ -26,8 +25,7 @@ export type Database = {
           last_visit?: string
           created_at?: string
           status?: string
-          gift?: string
-        }
+                  }
         Update: {
           id?: string
           phone_number?: string
@@ -35,7 +33,6 @@ export type Database = {
           last_visit?: string
           created_at?: string
           status?: string
-          gift?: string
         }
         Relationships: []
       },
@@ -49,6 +46,7 @@ export type Database = {
           phone_number: string | null
           deleted: boolean
         }
+        
         Insert: {
           created_at?: string
           id?: string
@@ -64,7 +62,28 @@ export type Database = {
           table_number?: number
         }
         Relationships: []
-      }
+      },
+      categories: {
+  Row: {
+    id: number;
+    created_at: string;
+    name_ar: string;
+    name_en: string;
+  };
+  Insert: {
+    id?: number;
+    created_at?: string;
+    name_ar: string;
+    name_en: string;
+  };
+  Update: {
+    id?: number;
+    created_at?: string;
+    name_ar?: string;
+    name_en?: string;
+  };
+  Relationships: [];
+}
       items: {
         Row: {
           id: string;

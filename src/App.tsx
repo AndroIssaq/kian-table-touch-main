@@ -1,10 +1,6 @@
 import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AnimatePresence } from "framer-motion";
-import Index from "./pages/ChooseTable";
+import {  Routes, Route } from "react-router-dom";
 import CallWaiter from "./pages/CallWaiter";
 import Menu from "./pages/Menu";
 import NotFound from "./pages/NotFound";
@@ -25,10 +21,14 @@ import CentralLoader from "@/components/CentralLoader";
 import CategoryMenu from "@/pages/CategoryMenu";
 import { CartProvider } from "@/contexts/CartContext";
 import { ClerkProvider } from '@clerk/clerk-react';
+import { arSA } from '@clerk/localizations';
 import SignInPage from "./pages/SignInPage";
 import SignUpPage from "./pages/SignUpPage";
 import UserHome from "./pages/UserHome";
 import { LoyaltyPointsProvider } from '@/contexts/LoyaltyPointsContext';
+import MenuDashboard from "./pages/menuDashboard";
+import CategoryProducts from "./pages/CategoryProducts";
+import UsersDashboard from "./pages/UsersDashboard";
 
 // Create a query client instance
 const queryClient = new QueryClient();
@@ -36,15 +36,17 @@ const queryClient = new QueryClient();
 function App() {
   return (
     <ClerkProvider
+      localization={arSA}
+    telemetry={false}
       publishableKey={import.meta.env.VITE_CLERK_PUBLISHABLE_KEY}
       appearance={{
         variables: {
-          colorPrimary: '#8B1E3F',
-          colorText: '#23243a',
-          colorBackground: '#f9f6ff',
-          colorInputBackground: '#fff',
-          colorInputText: '#23243a',
-          colorDanger: '#b91c1c',
+          colorPrimary: '#d39d28',
+          colorText: '#d39d28',
+          colorBackground: '#d39d28',
+          colorInputBackground: '#d39d28',
+          colorInputText: '#d39d28',
+          colorDanger: '#d39d28',
           fontFamily: 'Cairo, sans-serif',
           borderRadius: '1.5rem',
         },
@@ -55,7 +57,7 @@ function App() {
           <CentralLoader />
           <ThemeProvider>
             <LanguageProvider>
-              <CartProvider>
+              <CartProvider >
                 <AdminAuthProvider>
                   <LoyaltyPointsProvider>
                     <Toaster />
@@ -69,11 +71,7 @@ function App() {
                       } />
                       
                       {/* Protected User Routes */}
-                      <Route path="/choose-table" element={
-                        <ProtectedRoute>
-                          <ChooseTable />
-                        </ProtectedRoute>
-                      } />
+                      <Route path="/choose-table" element={<ChooseTable />} />
                       <Route path="/menu" element={
                         <ProtectedRoute>
                           <Menu />
@@ -107,10 +105,21 @@ function App() {
                           <Reports />
                         </AdminProtectedRoute>
                       } />
+                      <Route path="/menu-dashboard" element={
+                        <AdminProtectedRoute>
+                          <MenuDashboard />
+                        </AdminProtectedRoute>
+                      } />
+                      <Route path="/users-dashboard" element={
+                        <AdminProtectedRoute>
+                          <UsersDashboard />
+                        </AdminProtectedRoute>
+                      } />
+                      <Route path="/menu-dashboard/category/:id" element={<CategoryProducts />} />
                       {/* Other routes */}
                       <Route path="*" element={<NotFound />} />
-                      <Route path="/sign-in" element={<SignInPage />} />
-                      <Route path="/sign-up" element={<SignUpPage />} />
+                      <Route path="/sign-in/*" element={<SignInPage />} />
+                      <Route path="/sign-up/*" element={<SignUpPage />} />
                     </Routes>
                   </LoyaltyPointsProvider>
                 </AdminAuthProvider>

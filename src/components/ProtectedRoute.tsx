@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useUser, SignedIn, SignedOut, RedirectToSignIn } from '@clerk/clerk-react';
 
 interface ProtectedRouteProps {
@@ -7,6 +7,7 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
+  const location = useLocation();
   const [isVerified, setIsVerified] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -60,7 +61,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
         {children}
       </SignedIn>
       <SignedOut>
-        <RedirectToSignIn />
+        <Navigate to="/sign-in" replace />
       </SignedOut>
     </>
   );

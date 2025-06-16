@@ -31,6 +31,7 @@ interface LoyaltyInfo {
   points: number;
   status: string | null;
   point_status: 'approved' | 'pending' | 'rejected' | null;
+  // Removed gift and got_the_gift fields
 }
 
 // مكون مؤقت لعداد الوقت
@@ -123,13 +124,12 @@ const RequestCard = ({
     <div className="mb-2 flex items-center gap-2">
       <span className="font-semibold text-kian-charcoal dark:text-yellow-100 text-sm">{t("userName")}: {request.user_name || "-"}</span>
     </div>
-    <div className="mb-2 flex flex-col items-start flex-wrap gap-2 ">
+    <div className="mb-2 flex items-center gap-2">
       <span className="font-semibold text-kian-charcoal dark:text-yellow-100 text-sm">
-        {t("points")}:  <span className="inline-flex items-center px-2 py-1 rounded-full bg-gradient-to-br from-green-200 via-green-100 to-green-50 text-green-900 font-bold text-xs shadow border border-green-300 dark:from-green-900 dark:via-green-800 dark:to-green-700 dark:text-green-100 dark:border-green-700">
-          {request.user_id && loyaltyInfo[request.user_id]?.points !== undefined
-            ? loyaltyInfo[request.user_id]?.points
-            : "-"}
-        </span>
+        {t("points")}:
+      </span>
+      <span className="inline-flex items-center px-2 py-1 rounded-full bg-gradient-to-br from-green-200 via-green-100 to-green-50 text-green-900 font-bold text-xs shadow border border-green-300 dark:from-green-900 dark:via-green-800 dark:to-green-700 dark:text-green-100 dark:border-green-700">
+        {request.user_id && loyaltyInfo[request.user_id]?.points !== undefined ? loyaltyInfo[request.user_id]?.points : "-"}
       </span>
     </div>
     <div className="flex flex-wrap gap-2 mt-3 justify-center">
@@ -294,12 +294,28 @@ const StaffDashboard = () => {
     };
     fetchRequests();
     // اشتراك فوري للتحديثات
-    const subscription = supabase.channel("waiter_requests_changes").on(
+    const requestsSub = supabase.channel("waiter_requests_changes").on(
       "postgres_changes",
       { event: "*", schema: "public", table: "waiter_requests" },
       () => fetchRequests()
     ).subscribe();
-    return () => { supabase.removeChannel(subscription); };
+
+    // اشتراك فوري لتغييرات نقاط الولاء
+    const loyaltySub = supabase.channel("loyalty_points_changes").on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "loyalty_visits" },
+      (payload) => {
+        const row = payload.new as any;
+        if (row && row.user_id) {
+          setLoyaltyInfo(prev => ({ ...prev, [row.user_id]: { ...prev[row.user_id], ...row } }));
+        }
+      }
+    ).subscribe();
+
+    return () => {
+      supabase.removeChannel(requestsSub);
+      supabase.removeChannel(loyaltySub);
+    };
   }, [t]);
   useEffect(() => { }, []); // مزامنة الهدايا مع النقاط عند فتح الصفحة (لو فيه منطق إضافي)
   return (
@@ -312,6 +328,8 @@ const StaffDashboard = () => {
             <div className="flex items-center gap-4">
               <Button variant="outline" className="bg-gold hover:bg-gold/90 text-black dark:bg-black dark:hover:bg-black/90 dark:text-gold" onClick={() => navigate("/loyalty-management")}>{t("generateDailyCode")}</Button>
               <Button variant="outline" className="bg-blue-100 hover:bg-blue-200 text-blue-900 dark:bg-blue-900 dark:hover:bg-blue-800 dark:text-gold" onClick={() => navigate("/reports")}>التقارير</Button>
+              <Button variant="outline" className="bg-green-500 hover:bg-green-600 text-white dark:bg-green-700 dark:hover:bg-green-800 dark:text-gold font-bold" onClick={() => navigate("/menu-dashboard")}>{language === 'ar' ? 'قائمة الطعام' : 'Menu'}</Button>
+              <Button variant="outline" className="bg-purple-500 hover:bg-purple-600 text-white font-bold" onClick={() => navigate("/users-dashboard")}>المستخدمين</Button>
               <Button variant="outline" className=" bg-red-400 text-white hover:bg-red-200" onClick={logout}>{t("logout")}</Button>
               <div className="relative">
                 <Bell className="h-12 w-12 text-kian-charcoal dark:text-kian-sand" />
