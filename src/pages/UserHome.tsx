@@ -15,6 +15,7 @@ import 'swiper/css/pagination';
 import { createClient } from "@supabase/supabase-js";
 import { useToast } from "@/components/ui/use-toast";
 import DrinkRecomaindationSystem from "./drinkRecomaindationSystem";
+// All loyalty logic is now points-based only. Removed any references to gift-based rewards.
 
 const sectionVariants = {
   hidden: { opacity: 0, y: 20 },

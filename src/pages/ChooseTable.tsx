@@ -31,7 +31,6 @@ const ChooseTable = () => {
 
   return (
     <PageTransition>
-      <UserNavbar cartCount={0} />
       <div className="cafe-container mt-[100px]">
         <header>
           <motion.h1 

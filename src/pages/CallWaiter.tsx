@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState, ChangeEvent, FormEvent } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ReceiptText } from "lucide-react";
@@ -11,26 +11,34 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { registerLoyaltyVisitByUserId } from "@/integrations/supabase/loyalty";
 import { useCart } from "@/contexts/CartContext";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useLoyaltyPoints } from "@/contexts/LoyaltyPointsContext";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useUser } from '@clerk/clerk-react';
 import { UserNavbar } from "@/components/UserNavbar";
 
-const CallWaiter = () => {
+// --- Types ---
+type ItemInfo = { name?: string; id?: string; price?: string };
+type InvoiceRow = { name: string; quantity: number; type: 'cash' | 'loyalty'; price?: number; points?: number };
+
+const CallWaiter: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [request, setRequest] = useState("");
+  // --- State ---
+  const [request, setRequest] = useState<string>("");
   const [tableNumber, setTableNumber] = useState<number | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [loyaltyPoints, setLoyaltyPoints] = useState<number | null>(null);
-  const [loyaltyReward, setLoyaltyReward] = useState<string | undefined>();
+  // Removed loyaltyReward state (gift logic removed)
   const { t, language } = useLanguage();
-  const [itemInfo, setItemInfo] = useState<{ name?: string; id?: string; price?: string }>({});
+  const [itemInfo, setItemInfo] = useState<ItemInfo>({});
   const { addToCart, cart, clearCart } = useCart();
-  const [cartOpen, setCartOpen] = useState(false);
+  const { refreshPoints } = useLoyaltyPoints();
+  const [cartOpen, setCartOpen] = useState<boolean>(false);
   const { user } = useUser();
-  const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
+  const [invoiceDialogOpen, setInvoiceDialogOpen] = useState<boolean>(false);
   
   // استخراج بيانات الأكل من الكويري سترينج
+  // Extract food item info from query string
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const item = params.get("item");
@@ -41,6 +49,7 @@ const CallWaiter = () => {
     }
   }, [location.search]);
   
+  // Redirect if no table number in URL
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const table = params.get("table") || params.get("tableNumber");
@@ -50,13 +59,15 @@ const CallWaiter = () => {
   }, [location.search, navigate]);
   
   // تحديث رقم الترابيزة من ال URL عند كل تغيير
+  // Update table number from URL on every change
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const table = params.get("table") || params.get("tableNumber");
     setTableNumber(table ? Number(table) : null);
   }, [location.search]);
   
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Handle waiter call form submission
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
     if (tableNumber === null) {
@@ -113,26 +124,12 @@ const CallWaiter = () => {
         const userName = user?.fullName || user?.username || user?.emailAddresses?.[0]?.emailAddress || "";
         const result = await registerLoyaltyVisitByUserId(user.id, userName);
         setLoyaltyPoints(result.points);
-        setLoyaltyReward(result.reward);
+        await refreshPoints(); // Ensure navbar updates immediately
         let loyaltyMessage = "";
         if (result.alreadyVisitedToday) {
           loyaltyMessage = `"${t("loyaltyPoints") || "نقاط الولاء"}: ${result.points}. لقد حصلت على نقاط اليوم بالفعل، عد غدًا للصول على المزيد!"`;
-        } else if (result.reward) {
-          const rewardMessage = result.reward === "free_drink"
-            ? "مبروك! لقد وصلت إلى 10 نقاط وحصلت على مشروب مجاني"
-            : "مبروك! لقد وصلت إلى 20 نقطة وحصلت على خصم 20%";
-          loyaltyMessage = `${rewardMessage} 🎉 (${result.points} نقاط)`;
         } else {
-          let pointsToNextReward = 0;
-          let rewardType = "";
-          if (result.points < 10) {
-            pointsToNextReward = 10 - result.points;
-            rewardType = "مشروب مجاني";
-          } else if (result.points < 20) {
-            pointsToNextReward = 20 - result.points;
-            rewardType = "خصم 20%";
-          }
-          loyaltyMessage = `"${t("loyaltyPoints") || "نقاط الولاء"}: ${result.points} :  ( ${pointsToNextReward} نقاط متبقية للحصول على ${rewardType}." ) `;
+          loyaltyMessage = `"${t("loyaltyPoints") || "نقاط الولاء"}: ${result.points} نقطة.`;
         }
         toast({
           title: t("waiterCalled"),
@@ -152,30 +149,35 @@ const CallWaiter = () => {
     }
   };
    // زر "تم الدفع" لمسح الفاتورة وإغلاق النافذة
+  // Handle clearing invoice ("تم الدفع" button)
   const handleClearInvoice = () => {
     setInvoice([]);
     localStorage.removeItem("invoice");
     setInvoiceDialogOpen(false);
   };
 
+
   // حالة الفاتورة (محملة من localStorage)
-  const [invoice, setInvoice] = useState<any[]>(() => {
+  // Invoice state (persisted in localStorage)
+  const [invoice, setInvoice] = useState<InvoiceRow[]>(() => {
     const stored = localStorage.getItem("invoice");
     return stored ? JSON.parse(stored) : [];
   });
 
   // حفظ الفاتورة في localStorage عند كل تغيير
+  // Save invoice to localStorage on every change
   useEffect(() => {
     localStorage.setItem("invoice", JSON.stringify(invoice));
   }, [invoice]);
   
   // زر الفاتورة العائم الموحد
-  const InvoiceFloatingButton = ({ onClick }: { onClick: () => void }) => (
+  // Floating invoice button
+  const InvoiceFloatingButton: React.FC<{ onClick: () => void }> = ({ onClick }) => (
     <button
       onClick={onClick}
       className="fixed bottom-6 right-6 z-[100] flex items-center gap-2 px-5 py-3 rounded-full shadow-2xl bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 text-kian-burgundy font-extrabold text-lg border-2 border-yellow-600 transition-all duration-200 hover:scale-105"
       style={{ boxShadow: '0 8px 32px 0 rgba(255, 193, 7, 0.25)' }}
-      aria-label="عرض الفاتورة"
+      aria-label={language === 'ar' ? 'عرض الفاتورة' : 'View Invoice'}
     >
       <ReceiptText className="w-6 h-6 mr-1 text-kian-burgundy drop-shadow" />
       <span className="hidden sm:inline">{language === 'ar' ? 'عرض الفاتورة' : 'View Invoice'}</span>
@@ -208,7 +210,7 @@ const CallWaiter = () => {
               id="request"
               placeholder={t("placeholder")}
               value={request}
-              onChange={(e) => setRequest(e.target.value)}
+              onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setRequest(e.target.value)}
               className="min-h-32"
             />
           </div>

@@ -5,13 +5,13 @@
 import { supabase } from './client';
 
 // جلب معلومات نقاط الولاء بناءً على userId
-export async function getLoyaltyPointsByUserId(userId: string): Promise<{ points: number, reward?: string, found: boolean, gift?: string | null, got_the_gift?: boolean | null }> {
+export async function getLoyaltyPointsByUserId(userId: string): Promise<{ points: number, reward?: string, found: boolean }> {
   if (!userId) {
     return { points: 0, found: false };
   }
   const { data, error } = await supabase
     .from("loyalty_visits")
-    .select("points, gift, got_the_gift")
+    .select("points")
     .eq("user_id", userId)
     .single();
   if (error) {
@@ -31,65 +31,21 @@ export async function getLoyaltyPointsByUserId(userId: string): Promise<{ points
   return {
     points,
     reward,
-    found: true,
-    gift: (data && typeof data === 'object' && 'gift' in data) ? (data as any).gift ?? null : null,
-    got_the_gift: (data && typeof data === 'object' && 'got_the_gift' in data) ? (data as any).got_the_gift ?? null : null
+    found: true
   };
 }
 
 /**
  * دالة منفصلة لتحديث عمود gift عند وصول النقاط إلى 10 أو 20 فقط
  */
-export async function updateGiftForLoyaltyByUserId(userId: string, points: number) {
-  let gift = null;
-  if (points === 10) {
-    gift = "عصير مجاني";
-  } else if (points > 10 && points < 20) {
-    gift = "customerGiftIfThePointsMoreThanTen";
-  } else if (points === 20) {
-    gift = "خصم 20%";
-  } else if (points > 20) {
-    gift = "customerGiftIfThePointsMoreThanTwenty";
-  } else {
-    gift = null;
-  }
-  await supabase
-    .from("loyalty_visits")
-    .update({ gift })
-    .eq("user_id", userId);
-}
+// [REMOVED] updateGiftForLoyaltyByUserId: No longer needed, as 'gift' column is removed.
+
 
 /**
  * دالة تقوم بمزامنة عمود gift مع النقاط لجميع العملاء
  */
-export async function syncGiftWithPoints() {
-  const { data, error } = await supabase
-    .from("loyalty_visits")
-    .select("id, user_id, points, gift");
-  if (error) {
-    console.error("Error fetching loyalty records for syncGiftWithPoints:", error);
-    return;
-  }
-  if (!data || data.length === 0) return;
-  for (const row of data) {
-    if (!row || typeof row !== 'object') continue;
-    const points = 'points' in row ? (row as any).points ?? 0 : 0;
-    const id = 'id' in row ? (row as any).id : null;
-    const gift = 'gift' in row ? (row as any).gift : null;
-    let correctGift = null;
-    if (points === 10) correctGift = "مشروب مجاني";
-    else if (points > 10 && points < 20) correctGift = "العميل كان له مشروب مجاني";
-    else if (points === 20) correctGift = "خصم 20%";
-    else if (points > 20) correctGift = "العميل كان له خصم 20%";
-    else correctGift = null;
-    if (gift !== correctGift && id) {
-      await supabase
-        .from("loyalty_visits")
-        .update({ gift: correctGift })
-        .eq("id", id);
-    }
-  }
-}
+// [REMOVED] syncGiftWithPoints: No longer needed, as 'gift' column is removed.
+
 
 // تسجيل زيارة جديدة بناءً على userId
 export async function registerLoyaltyVisitByUserId(userId: string, userName: string = ""): Promise<{ points: number, reward?: string, alreadyVisitedToday?: boolean, isNewUser?: boolean }> {
@@ -124,9 +80,7 @@ export async function registerLoyaltyVisitByUserId(userId: string, userName: str
           user_name: userName,
         })
         .eq("id", (data as any).id);
-      if (points === 10 || points === 20) {
-        await updateGiftForLoyaltyByUserId(userId, points);
-      }
+
     }
     if (points === 20) {
       reward = "special_discount";
@@ -137,7 +91,6 @@ export async function registerLoyaltyVisitByUserId(userId: string, userName: str
     isNewUser = true;
     points = 1;
     const now = new Date().toISOString();
-    const gift = points === 10 ? "عصير مجاني" : points === 20 ? "خصم 20%" : points > 20 ? "customerGiftIfThePointsMoreThanTwenty" : null;
     const { error: insertError } = await supabase
       .from("loyalty_visits")
       .insert([{ 
@@ -147,8 +100,7 @@ export async function registerLoyaltyVisitByUserId(userId: string, userName: str
         points, 
         last_visit: now,
         created_at: now,
-        status: 'active',
-        gift
+        status: 'active'
       }]);
     if (insertError) {
       console.error("Error inserting loyalty visit:", insertError);

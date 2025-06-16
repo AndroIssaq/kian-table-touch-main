@@ -26,7 +26,19 @@ export const LoyaltyPointsProvider = ({ children }: { children: React.ReactNode 
 
   React.useEffect(() => {
     refreshPoints();
-  }, [refreshPoints]);
+    if (!user?.id) return;
+    const channel = supabase.channel('loyalty_points_user_' + user.id)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'loyalty_visits', filter: `user_id=eq.${user.id}` }, (payload) => {
+        const newRow: any = payload.new;
+        if (newRow && typeof newRow.points === 'number') {
+          setPoints(newRow.points);
+        }
+      })
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [refreshPoints, user?.id]);
 
   return (
     <LoyaltyPointsContext.Provider value={{ points, setPoints, refreshPoints }}>

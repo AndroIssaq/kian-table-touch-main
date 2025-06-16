@@ -1,20 +1,21 @@
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ReceiptText } from "lucide-react";
 import PageTransition from "@/components/PageTransition";
 import ThemeLanguageToggle from "@/components/ThemeLanguageToggle";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from '@/integrations/supabase/client';
+import { useLoyaltyPoints } from '@/contexts/LoyaltyPointsContext';
+import { registerLoyaltyVisitByUserId } from '@/integrations/supabase/loyalty';
 import { useEffect, useState } from "react";
 import { useUser } from '@clerk/clerk-react';
 import UserNavbar from '@/components/UserNavbar';
 import { useCart } from '@/contexts/CartContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { toast } from '@/components/ui/use-toast';
-import { useLoyaltyPoints } from '@/contexts/LoyaltyPointsContext';
-import { ReceiptText } from "lucide-react";
 
-const categoryNames = {
+// Category names in Arabic and English
+const categoryNames: Record<number, { ar: string; en: string }> = {
   1: { ar: "مشروبات ساخنة", en: "Hot Drinks" },
   2: { ar: "مشروبات فريش", en: "Fresh Drinks" },
   3: { ar: "سموزي", en: "Smoothies" },
@@ -23,13 +24,25 @@ const categoryNames = {
   6: { ar: "بيتزا", en: "Pizza" },
   7: { ar: "خصومات", en: "Discounts" },
   8: { ar: "كوكتيلات", en: "Cocktails" },
-  9: { ar: "سلاطات", en: "Salads" },
+  9: { ar: "سلطات", en: "Salads" },
   10: { ar: "مقبلات", en: "Appetizers" },
   11: { ar: "حلويات", en: "Desserts" },
 };
 
+interface Item {
+  id: number;
+  name_ar: string;
+  name_en: string;
+  price: number;
+  points: number;
+  image_url?: string;
+  description_ar?: string;
+  description_en?: string;
+  [key: string]: any;
+}
+
 export default function CategoryMenu() {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
   const table = Number(new URLSearchParams(location.search).get("table"));
@@ -37,24 +50,26 @@ export default function CategoryMenu() {
   const { user } = useUser();
   const { points, setPoints, refreshPoints } = useLoyaltyPoints();
   const numericId = Number(id);
-  const catName = categoryNames[numericId as keyof typeof categoryNames]?.[language] || "";
-  const [items, setItems] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const catName = categoryNames[numericId]?.[language] || "";
+  const [items, setItems] = useState<Item[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   const { addToCart, cart, clearCart } = useCart();
-  const [confirmLoyaltyDialogOpen, setConfirmLoyaltyDialogOpen] = useState(false);
-  const [selectedLoyaltyItem, setSelectedLoyaltyItem] = useState<any>(null);
+  const [confirmLoyaltyDialogOpen, setConfirmLoyaltyDialogOpen] = useState<boolean>(false);
+  const [selectedLoyaltyItem, setSelectedLoyaltyItem] = useState<Item | null>(null);
   const [invoice, setInvoice] = useState<any[]>(() => {
     const stored = localStorage.getItem("invoice");
     return stored ? JSON.parse(stored) : [];
   });
-  const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
-  const [confirmOrderDialogOpen, setConfirmOrderDialogOpen] = useState(false);
-  const [selectedOrderItem, setSelectedOrderItem] = useState<any>(null);
+  const [invoiceDialogOpen, setInvoiceDialogOpen] = useState<boolean>(false);
+  const [confirmOrderDialogOpen, setConfirmOrderDialogOpen] = useState<boolean>(false);
+  const [selectedOrderItem, setSelectedOrderItem] = useState<Item | null>(null);
 
+  // Sync invoice state with localStorage
   useEffect(() => {
     localStorage.setItem("invoice", JSON.stringify(invoice));
   }, [invoice]);
 
+  // Fetch items for selected category
   useEffect(() => {
     if (!table) {
       navigate("/choose-table");
@@ -82,6 +97,7 @@ export default function CategoryMenu() {
     if (numericId) fetchItems();
   }, [numericId, language, table, navigate]);
 
+  // Fetch current user's loyalty points (points only)
   useEffect(() => {
     const fetchLoyaltyPoints = async () => {
       if (!user) return;
@@ -95,6 +111,7 @@ export default function CategoryMenu() {
     fetchLoyaltyPoints();
   }, [user, setPoints]);
 
+  // Ensure table param is always present
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const table = params.get("table") || params.get("tableNumber");
@@ -132,11 +149,27 @@ export default function CategoryMenu() {
             user_name: user?.fullName || user?.username || user?.emailAddresses?.[0]?.emailAddress || '',
           }
         ]);
-        toast({
-          title: language === 'ar' ? 'تم إرسال الطلب' : 'Order sent',
-          description: language === 'ar' ? 'تم إرسال طلبك بنجاح وسيظهر للنادل.' : 'Your order has been sent and will appear to the staff.',
-          duration: 3000,
-        });
+        // تسجيل نقطة الولاء بعد الطلب
+        if (user?.id) {
+          const userName = user?.fullName || user?.username || user?.emailAddresses?.[0]?.emailAddress || '';
+          const result = await registerLoyaltyVisitByUserId(user.id, userName);
+          setPoints(result.points);
+          await refreshPoints();
+          const loyaltyMsg = result.alreadyVisitedToday
+            ? (language === 'ar' ? `لديك الآن ${result.points} نقطة (لا نقاط إضافية اليوم).` : `You now have ${result.points} points (no extra points today).`)
+            : (language === 'ar' ? `تمت إضافة نقطة! إجمالي نقاطك: ${result.points}` : `Point added! Total points: ${result.points}`);
+          toast({
+            title: language === 'ar' ? 'تم إرسال الطلب' : 'Order sent',
+            description: `${language === 'ar' ? 'تم إرسال طلبك بنجاح وسيظهر للنادل.' : 'Your order has been sent and will appear to the staff.'} ${loyaltyMsg}`,
+            duration: 3000,
+          });
+        } else {
+          toast({
+            title: language === 'ar' ? 'تم إرسال الطلب' : 'Order sent',
+            description: language === 'ar' ? 'تم إرسال طلبك بنجاح وسيظهر للنادل.' : 'Your order has been sent and will appear to the staff.',
+            duration: 3000,
+          });
+        }
       } catch (err) {
         toast({
           title: language === 'ar' ? 'خطأ' : 'Error',
@@ -175,11 +208,27 @@ export default function CategoryMenu() {
           }
         ]);
       }
-      toast({
-        title: language === 'ar' ? 'تم إرسال الطلب' : 'Order sent',
-        description: language === 'ar' ? 'تم إرسال طلبك بنجاح وسيظهر للنادل.' : 'Your order has been sent and will appear to the staff.',
-        duration: 3000,
-      });
+      // تسجيل نقطة ولاء بعد إرسال الطلبات المجمعة
+      if (user?.id) {
+        const userName = user?.fullName || user?.username || user?.emailAddresses?.[0]?.emailAddress || '';
+        const result = await registerLoyaltyVisitByUserId(user.id, userName);
+        setPoints(result.points);
+        await refreshPoints();
+        const loyaltyMsg = result.alreadyVisitedToday
+          ? (language === 'ar' ? `لديك الآن ${result.points} نقطة (لا نقاط إضافية اليوم).` : `You now have ${result.points} points (no extra points today).`)
+          : (language === 'ar' ? `تمت إضافة نقطة! إجمالي نقاطك: ${result.points}` : `Point added! Total points: ${result.points}`);
+        toast({
+          title: language === 'ar' ? 'تم إرسال الطلب' : 'Order sent',
+          description: `${language === 'ar' ? 'تم إرسال طلبك بنجاح وسيظهر للنادل.' : 'Your order has been sent and will appear to the staff.'} ${loyaltyMsg}`,
+          duration: 3000,
+        });
+      } else {
+        toast({
+          title: language === 'ar' ? 'تم إرسال الطلب' : 'Order sent',
+          description: language === 'ar' ? 'تم إرسال طلبك بنجاح وسيظهر للنادل.' : 'Your order has been sent and will appear to the staff.',
+          duration: 3000,
+        });
+      }
       clearCart();
     } catch (err) {
       toast({

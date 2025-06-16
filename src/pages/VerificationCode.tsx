@@ -1,56 +1,79 @@
-import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from "react-router-dom";
+import React, { useState, useEffect, ChangeEvent, FormEvent } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 
-// حالات التحقق المختلفة
+// --- Types ---
+type VerificationStatus = 'idle' | 'loading' | 'success' | 'error';
+
+// --- Helper Functions ---
+function getStatusColor(status: VerificationStatus): string {
+  switch (status) {
+    case 'success':
+      return 'text-green-600';
+    case 'error':
+      return 'text-red-600';
+    default:
+      return 'text-gray-800';
+  }
+}
+
+function isTokenValidToday(token: string | null): boolean {
+  if (!token) return false;
+  const parts = token.split('-');
+  const timestamp = parts.length > 2 ? Number(parts[2]) : null;
+  if (!timestamp) return false;
+  const tokenDate = new Date(timestamp);
+  const now = new Date();
+  return (
+    tokenDate.getFullYear() === now.getFullYear() &&
+    tokenDate.getMonth() === now.getMonth() &&
+    tokenDate.getDate() === now.getDate()
+  );
+}
+
+// --- Main Component ---
 const VerificationCode: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const table = new URLSearchParams(location.search).get("table");
+  const table = new URLSearchParams(location.search).get('table');
 
-  const [code, setCode] = useState('');
-  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
-  const [statusMessage, setStatusMessage] = useState('');
+  const [code, setCode] = useState<string>('');
+  const [status, setStatus] = useState<VerificationStatus>('idle');
+  const [statusMessage, setStatusMessage] = useState<string>('');
 
-  // تحقق عند تحميل الصفحة إذا كان هناك رمز تحقق صالح
+  // On mount: check if a valid verification token exists for today
   useEffect(() => {
     const token = localStorage.getItem('verificationToken');
-    if (token) {
-      const parts = token.split('-');
-      const timestamp = parts.length > 2 ? Number(parts[2]) : null;
-      if (timestamp) {
-        const tokenDate = new Date(timestamp);
-        const now = new Date();
-        if (
-          tokenDate.getFullYear() === now.getFullYear() &&
-          tokenDate.getMonth() === now.getMonth() &&
-          tokenDate.getDate() === now.getDate()
-        ) {
-          if (table) {
-            navigate(`/user-home?table=${table}`, { state: { verificationToken: token } });
-          } else {
-            navigate('/choose-table', { state: { verificationToken: token } });
-          }
-        } else {
-          localStorage.removeItem('verificationToken');
-        }
+    if (isTokenValidToday(token)) {
+      const targetPath = table
+        ? `/user-home?table=${table}`
+        : '/choose-table';
+      const currentPath = window.location.pathname + window.location.search;
+      if (currentPath !== targetPath) {
+        navigate(targetPath, { state: { verificationToken: token } });
       }
+    } else if (token) {
+      localStorage.removeItem('verificationToken');
     }
   }, [navigate, table]);
 
+  // If no table param, redirect to choose-table
   useEffect(() => {
     if (!table) {
-      navigate("/choose-table", { replace: true });
-      setStatus('error');
+      navigate('/choose-table', { replace: true });
     }
   }, [table, navigate]);
 
-  const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => setCode(e.target.value);
+  // Handle input change
+  const handleCodeChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setCode(e.target.value);
+  };
 
+  // Handle verification logic
   const handleVerify = async () => {
     if (!code.trim()) {
       setStatus('error');
@@ -81,7 +104,7 @@ const VerificationCode: React.FC = () => {
       }
       setStatus('success');
       setStatusMessage('تم التأكد من الكود بنجاح');
-      localStorage.setItem('verificationToken', 'verified-' + code + '-' + now.getTime());
+      localStorage.setItem('verificationToken', `verified-${code}-${now.getTime()}`);
       setTimeout(() => {
         if (table) {
           navigate(`/user-home?table=${table}`);
@@ -89,19 +112,16 @@ const VerificationCode: React.FC = () => {
           navigate('/choose-table');
         }
       }, 1500);
-    } catch (error) {
+    } catch (err) {
       setStatus('error');
       setStatusMessage('حدث خطأ أثناء التحقق، حاول مرة أخرى');
-      console.error('Verification error:', error);
+      // eslint-disable-next-line no-console
+      console.error('Verification error:', err);
     }
   };
 
-  const getStatusColor = () => {
-    if (status === 'success') return 'text-green-600';
-    if (status === 'error') return 'text-red-600';
-    return 'text-gray-800';
-  };
 
+  // --- Render ---
   return (
     <div className="flex items-center justify-center min-h-screen bg-muted">
       <Card className="w-full max-w-md">
@@ -112,7 +132,7 @@ const VerificationCode: React.FC = () => {
         </CardHeader>
         <CardContent>
           <form
-            onSubmit={e => {
+            onSubmit={(e: FormEvent<HTMLFormElement>) => {
               e.preventDefault();
               handleVerify();
             }}
@@ -138,7 +158,7 @@ const VerificationCode: React.FC = () => {
               className="w-full"
               disabled={status === 'loading' || status === 'success'}
             >
-              {status === 'loading' ? "جاري التحقق" : 'تحقق'}
+              {status === 'loading' ? 'جاري التحقق' : 'تحقق'}
             </Button>
             {statusMessage && (
               <div className={`mt-2 text-center font-bold ${getStatusColor()}`}>

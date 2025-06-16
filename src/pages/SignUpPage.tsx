@@ -5,7 +5,7 @@ const signUpAppearance = {
   layout: {
     socialButtonsVariant: 'iconButton',
     logoPlacement: 'inside',
-    logoImageUrl: '/favicon.ico',
+    logoImageUrl: '/',
     showOptionalFields: true,
     termsPageUrl: '/terms',
     privacyPageUrl: '/privacy',
@@ -40,16 +40,26 @@ export default function SignUpPage() {
 
   // إذا لم يوجد table، أعد التوجيه
   if (!table) {
-    navigate("/ChooseTable");
+    navigate("/choose-table");
     return null;
   }
   return (
-    <>
-      {/* زر رجوع لصفحة اختيار الترابيزة مع تمرير رقم الترابيزة */}
-      <button onClick={() => navigate(`/ChooseTable?table=${table}`)}>
-        رجوع لاختيار الترابيزة
+    <div className="min-h-screen bg-gradient-to-br from-[#fff8f0] via-[#f9f6ff] to-[#e8eaf6] flex items-center justify-center relative py-10">
+            {/* زر رجوع لصفحة اختيار الترابيزة مع تمرير رقم الترابيزة */}
+      <button
+        onClick={() => navigate(`/choose-table?table=${table}`)}
+        className="absolute top-4 right-4 flex items-center gap-2 px-4 py-2 rounded-full shadow-2xl bg-gradient-to-r from-gold via-yellow-300 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 text-kian-burgundy font-extrabold border-2 border-yellow-600 transition-all duration-200 hover:scale-105"
+      >
+        <span className="hidden sm:inline">رجوع لاختيار الترابيزة</span>
+        <span className="sm:hidden">رجوع</span>
       </button>
-      <SignUp appearance={signUpAppearance} />
-    </>
+      <SignUp
+        appearance={signUpAppearance}
+        routing="path"
+        path="/sign-up"
+        signInUrl={`/sign-in?table=${table}`}
+        afterSignUpUrl={`/user-home?table=${table}`}
+      />
+    </div>
   );
 }
