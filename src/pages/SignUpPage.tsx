@@ -1,65 +1,166 @@
-import { SignUp } from '@clerk/clerk-react';
-import { useLocation, useNavigate } from "react-router-dom";
+import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { useState } from 'react'
+import { supabase } from '@/integrations/supabase/client'
+export default function SignUpForm({
+    className,
+    ...props
+}: React.ComponentPropsWithoutRef<'div'>) {
+    const [email, setEmail] = useState('')
+    const [password, setPassword] = useState('')
+    const [repeatPassword, setRepeatPassword] = useState('')
+    const [error, setError] = useState<string | null>(null)
+    const [isLoading, setIsLoading] = useState(false)
+    const [success, setSuccess] = useState(false)
 
-const signUpAppearance = {
-  layout: {
-    socialButtonsVariant: 'iconButton',
-    logoPlacement: 'inside',
-    logoImageUrl: '/',
-    showOptionalFields: true,
-    termsPageUrl: '/terms',
-    privacyPageUrl: '/privacy',
-  },
-  variables: {
-    colorPrimary: '#8B1E3F', // Burgundy
-    colorText: '#23243a',
-    colorBackground: '#f9f6ff',
-    colorInputBackground: '#fff',
-    colorInputText: '#23243a',
-    colorAlphaShade: '#e8eaf6',
-    colorDanger: '#b91c1c',
-    fontFamily: 'Cairo, sans-serif',
-    borderRadius: '1.5rem',
-    shadowShimmer: '0 4px 32px 0 rgba(139,30,63,0.08)',
-  },
-  elements: {
-    card: 'rounded-3xl shadow-2xl border-0 bg-gradient-to-br from-white via-[#f9f6ff] to-[#e8eaf6] p-8',
-    formButtonPrimary: 'bg-gold hover:bg-gold/90 text-black font-bold rounded-full py-3',
-    headerTitle: 'text-3xl font-extrabold text-kian-burgundy',
-    headerSubtitle: 'text-base text-gray-500',
-    socialButtonsBlockButton: 'rounded-full',
-    input: 'rounded-xl',
-    footerAction: 'text-center',
-  },
-};
+    const handleSignUp = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setError(null)
 
-export default function SignUpPage() {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const table = new URLSearchParams(location.search).get("table");
+        if (password !== repeatPassword) {
+            setError('Passwords do not match')
+            return
+        }
+        setIsLoading(true)
 
-  // إذا لم يوجد table، أعد التوجيه
-  if (!table) {
-    navigate("/choose-table");
-    return null;
-  }
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-[#fff8f0] via-[#f9f6ff] to-[#e8eaf6] flex items-center justify-center relative py-10">
-            {/* زر رجوع لصفحة اختيار الترابيزة مع تمرير رقم الترابيزة */}
-      <button
-        onClick={() => navigate(`/choose-table?table=${table}`)}
-        className="absolute top-4 right-4 flex items-center gap-2 px-4 py-2 rounded-full shadow-2xl bg-gradient-to-r from-gold via-yellow-300 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 text-kian-burgundy font-extrabold border-2 border-yellow-600 transition-all duration-200 hover:scale-105"
-      >
-        <span className="hidden sm:inline">رجوع لاختيار الترابيزة</span>
-        <span className="sm:hidden">رجوع</span>
-      </button>
-      <SignUp
-        appearance={signUpAppearance}
-        routing="path"
-        path="/sign-up"
-        signInUrl={`/sign-in?table=${table}`}
-        afterSignUpUrl={`/user-home?table=${table}`}
-      />
-    </div>
-  );
+        try {
+            const { error } = await supabase.auth.signUp({
+                email,
+                password,
+            })
+            if (error) throw error
+            setSuccess(true)
+        } catch (error: unknown) {
+            setError(
+                error instanceof Error ? error.message : 'An error occurred'
+            )
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    return (
+        <div className='h-screen flex items-center justify-center'>
+            <div
+                className={cn(
+                    'flex flex-col gap-6 max-w-screen-sm w-full',
+                    className
+                )}
+                {...props}
+            >
+                {success ? (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className='text-2xl'>
+                                Thank you for signing up!
+                            </CardTitle>
+                            <CardDescription>
+                                Check your email to confirm
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <p className='text-sm text-muted-foreground'>
+                                You've successfully signed up. Please check your
+                                email to confirm your account before signing in.
+                            </p>
+                        </CardContent>
+                    </Card>
+                ) : (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className='text-2xl'>Sign up</CardTitle>
+                            <CardDescription>
+                                Create a new account
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <form onSubmit={handleSignUp}>
+                                <div className='flex flex-col gap-6'>
+                                    <div className='grid gap-2'>
+                                        <Label htmlFor='email'>Email</Label>
+                                        <Input
+                                            id='email'
+                                            type='email'
+                                            placeholder='m@example.com'
+                                            required
+                                            value={email}
+                                            onChange={(e) =>
+                                                setEmail(e.target.value)
+                                            }
+                                        />
+                                    </div>
+                                    <div className='grid gap-2'>
+                                        <div className='flex items-center'>
+                                            <Label htmlFor='password'>
+                                                Password
+                                            </Label>
+                                        </div>
+                                        <Input
+                                            id='password'
+                                            type='password'
+                                            required
+                                            value={password}
+                                            onChange={(e) =>
+                                                setPassword(e.target.value)
+                                            }
+                                        />
+                                    </div>
+                                    <div className='grid gap-2'>
+                                        <div className='flex items-center'>
+                                            <Label htmlFor='repeat-password'>
+                                                Repeat Password
+                                            </Label>
+                                        </div>
+                                        <Input
+                                            id='repeat-password'
+                                            type='password'
+                                            required
+                                            value={repeatPassword}
+                                            onChange={(e) =>
+                                                setRepeatPassword(
+                                                    e.target.value
+                                                )
+                                            }
+                                        />
+                                    </div>
+                                    {error && (
+                                        <p className='text-sm text-red-500'>
+                                            {error}
+                                        </p>
+                                    )}
+                                    <Button
+                                        type='submit'
+                                        className='w-full'
+                                        disabled={isLoading}
+                                    >
+                                        {isLoading
+                                            ? 'Creating an account...'
+                                            : 'Sign up'}
+                                    </Button>
+                                </div>
+                                <div className='mt-4 text-center text-sm'>
+                                    Already have an account?{' '}
+                                    <a
+                                        href='/login'
+                                        className='underline underline-offset-4'
+                                    >
+                                        Login
+                                    </a>
+                                </div>
+                            </form>
+                        </CardContent>
+                    </Card>
+                )}
+            </div>
+        </div>
+    )
 }

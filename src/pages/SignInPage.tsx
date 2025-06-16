@@ -1,78 +1,129 @@
-import { SignIn as ClerkSignIn } from '@clerk/clerk-react';
-import { useLocation, useNavigate } from "react-router-dom";
-import React from 'react';
+import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { useState } from 'react'
+import { supabase } from '@/integrations/supabase/client'
 
+export default function LoginForm({
+    className,
+    ...props
+}: React.ComponentPropsWithoutRef<'div'>) {
+    const [email, setEmail] = useState('')
+    const [password, setPassword] = useState('')
+    const [error, setError] = useState<string | null>(null)
+    const [isLoading, setIsLoading] = useState(false)
 
+    const handleLogin = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setIsLoading(true)
+        setError(null)
 
-export default function SignInPage() {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [table, setTable] = React.useState<string | null>(null);
-
-  // احفظ / استرجع رقم الترابيزة في sessionStorage حتى لا يضيع أثناء تنقل Clerk الداخلي
-  React.useEffect(() => {
-    const urlTable = new URLSearchParams(location.search).get("table");
-    if (urlTable) {
-      sessionStorage.setItem("table_number", urlTable);
-      setTable(urlTable);
-    } else {
-      const stored = sessionStorage.getItem("table_number");
-      setTable(stored);
+        try {
+            const { error } = await supabase.auth.signInWithPassword({
+                email,
+                password,
+            })
+            if (error) throw error
+            // Update this route to redirect to an authenticated route. The user already has an active session.
+            location.href = '/protected'
+        } catch (error: unknown) {
+            setError(
+                error instanceof Error ? error.message : 'An error occurred'
+            )
+        } finally {
+            setIsLoading(false)
+        }
     }
-  }, [location.search]);
 
-  // Clerk appearance (matches Sign-Up styling)
-  const signInAppearance = {
-    layout: {
-      socialButtonsVariant: 'iconButton',
-      logoPlacement: 'inside',
-      logoImageUrl: '/o',
-    },
-    variables: {
-      colorPrimary: '#8B1E3F', // Burgundy
-      colorText: '#23243a',
-      colorBackground: '#f9f6ff',
-      colorInputBackground: '#fff',
-      colorInputText: '#23243a',
-      colorAlphaShade: '#e8eaf6',
-      colorDanger: '#b91c1c',
-      fontFamily: 'Cairo, sans-serif',
-      borderRadius: '1.5rem',
-      shadowShimmer: '0 4px 32px 0 rgba(139,30,63,0.08)',
-    },
-    elements: {
-      card: 'rounded-3xl shadow-2xl border-0 bg-gradient-to-br from-white via-[#f9f6ff] to-[#e8eaf6] p-8',
-      formButtonPrimary: 'bg-gold hover:bg-gold/90 text-black font-bold rounded-full py-3',
-      headerTitle: 'text-3xl font-extrabold text-kian-burgundy',
-      headerSubtitle: 'text-base text-gray-500',
-      socialButtonsBlockButton: 'rounded-full',
-      input: 'rounded-xl',
-      footerAction: 'text-center',
-    },
-  };
-
-  // إذا لم يوجد table حتى بعد المحاولة، أعد التوجيه
-  if (!table) {
-    navigate("/choose-table", { replace: true });
-    return null;
-  }
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-[#fff8f0] via-[#f9f6ff] to-[#e8eaf6] flex items-center justify-center relative py-10">
-      {/* زر رجوع لصفحة اختيار الترابيزة مع تمرير رقم الترابيزة */}
-      <button
-        onClick={() => navigate(`/choose-table?table=${table}`)}
-        className="absolute top-4 right-4 flex items-center gap-2 px-4 py-2 rounded-full shadow-2xl bg-gradient-to-r from-gold via-yellow-300 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 text-kian-burgundy font-extrabold border-2 border-yellow-600 transition-all duration-200 hover:scale-105"
-      >
-        <span className="hidden sm:inline">رجوع لاختيار الترابيزة</span>
-        <span className="sm:hidden">رجوع</span>
-      </button>
-      <ClerkSignIn
-        appearance={signInAppearance as any}
-        routing="path"
-        path="/sign-in"
-        signUpUrl={`/sign-up?table=${table}`}
-        afterSignInUrl={`/user-home?table=${table}`}
-      />
-    </div>
-  );
+    return (
+        <div className='h-screen flex items-center justify-center'>
+            <div
+                className={cn(
+                    'flex flex-col gap-6 max-w-screen-sm w-full',
+                    className
+                )}
+                {...props}
+            >
+                {' '}
+                <Card>
+                    <CardHeader>
+                        <CardTitle className='text-2xl'>Login</CardTitle>
+                        <CardDescription>
+                            Enter your email below to login to your account
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <form onSubmit={handleLogin}>
+                            <div className='flex flex-col gap-6'>
+                                <div className='grid gap-2'>
+                                    <Label htmlFor='email'>Email</Label>
+                                    <Input
+                                        id='email'
+                                        type='email'
+                                        placeholder='m@example.com'
+                                        required
+                                        value={email}
+                                        onChange={(e) =>
+                                            setEmail(e.target.value)
+                                        }
+                                    />
+                                </div>
+                                <div className='grid gap-2'>
+                                    <div className='flex items-center'>
+                                        <Label htmlFor='password'>
+                                            Password
+                                        </Label>
+                                        <a
+                                            href='/forgot-password'
+                                            className='ml-auto inline-block text-sm underline-offset-4 hover:underline'
+                                        >
+                                            Forgot your password?
+                                        </a>
+                                    </div>
+                                    <Input
+                                        id='password'
+                                        type='password'
+                                        required
+                                        value={password}
+                                        onChange={(e) =>
+                                            setPassword(e.target.value)
+                                        }
+                                    />
+                                </div>
+                                {error && (
+                                    <p className='text-sm text-red-500'>
+                                        {error}
+                                    </p>
+                                )}
+                                <Button
+                                    type='submit'
+                                    className='w-full'
+                                    disabled={isLoading}
+                                >
+                                    {isLoading ? 'Logging in...' : 'Login'}
+                                </Button>
+                            </div>
+                            <div className='mt-4 text-center text-sm'>
+                                Don&apos;t have an account?{' '}
+                                <a
+                                    href='/sign-up'
+                                    className='underline underline-offset-4'
+                                >
+                                    Sign up
+                                </a>
+                            </div>
+                        </form>
+                    </CardContent>
+                </Card>
+            </div>
+        </div>
+    )
 }
