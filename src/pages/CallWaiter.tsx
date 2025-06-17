@@ -9,9 +9,7 @@ import { Toaster } from '@/components/ui/toaster'
 import { motion } from 'framer-motion'
 import { useLanguage } from '@/contexts/useLanguage'
 import { supabase } from '@/lib/supabase/client'
-import { registerLoyaltyVisitByUserId } from '@/lib/supabase/loyalty'
 import { useCart } from '@/contexts/useCart'
-import { useLoyaltyPoints } from '@/contexts/useLoyaltyPoints'
 import {
     Dialog,
     DialogContent,
@@ -38,15 +36,16 @@ const CallWaiter: React.FC = () => {
     const [request, setRequest] = useState<string>('')
     const [tableNumber, setTableNumber] = useState<number | null>(null)
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false)
-    const [loyaltyPoints, setLoyaltyPoints] = useState<number | null>(null)
     // Removed loyaltyReward state (gift logic removed)
     const { t, language } = useLanguage()
     const [itemInfo, setItemInfo] = useState<ItemInfo>({})
     const { addToCart, cart, clearCart } = useCart()
-    const { refreshPoints } = useLoyaltyPoints()
+
     const [cartOpen, setCartOpen] = useState<boolean>(false)
     const {
         session: { user },
+        loyaltyPoints,
+        updateLoyaltyPoints,
     } = useAuth()
     const [invoiceDialogOpen, setInvoiceDialogOpen] = useState<boolean>(false)
 
@@ -142,23 +141,22 @@ const CallWaiter: React.FC = () => {
             // تسجيل نقطة الولاء للمستخدم الحالي
             if (user?.id) {
                 const userName = user?.email.split('@')[0] || ''
-                const result = await registerLoyaltyVisitByUserId(
-                    user.id,
-                    userName
-                )
-                setLoyaltyPoints(result.points)
-                await refreshPoints() // Ensure navbar updates immediately
+                // const result = await registerLoyaltyVisitByUserId(
+                //     user.id,
+                //     userName
+                // )
+                // setLoyaltyPoints(result.points)
+                // await refreshPoints() // Ensure navbar updates immediately
+                await updateLoyaltyPoints(1)
                 let loyaltyMessage = ''
-                if (result.alreadyVisitedToday) {
+                if (true) {
                     loyaltyMessage = `"${
                         t('loyaltyPoints') || 'نقاط الولاء'
-                    }: ${
-                        result.points
-                    }. لقد حصلت على نقاط اليوم بالفعل، عد غدًا للصول على المزيد!"`
+                    }: ${loyaltyPoints}. لقد حصلت على نقاط اليوم بالفعل، عد غدًا للصول على المزيد!"`
                 } else {
                     loyaltyMessage = `"${
                         t('loyaltyPoints') || 'نقاط الولاء'
-                    }: ${result.points} نقطة.`
+                    }: ${loyaltyPoints} نقطة.`
                 }
                 toast({
                     title: t('waiterCalled'),

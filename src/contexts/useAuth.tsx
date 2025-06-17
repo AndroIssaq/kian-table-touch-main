@@ -1,32 +1,52 @@
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import React, {
+    createContext,
+    useContext,
+    useState,
+    useEffect,
+    useCallback,
+} from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { Session } from '@supabase/supabase-js'
+import {
+    getLoyaltyPointsByUserId,
+    updateLoyaltyPoints as updateLoyaltyPointsDb,
+} from '@/lib/supabase/loyalty'
+
 interface AuthContextType {
-    session: Session
+    session: Session | null
     logout: () => Promise<void>
-    isAdmin?: boolean
-    isLoading?: boolean
-    error?: string | null
-    setError?: React.Dispatch<React.SetStateAction<string | null>>
+    isAdmin: boolean
+    isLoading: boolean
+    error: string | null
+    setError: React.Dispatch<React.SetStateAction<string | null>>
     login: (loginData: { email: string; password: string }) => Promise<void>
-    signUp?: (signUpData: { email: string; password: string }) => Promise<void>
+    signUp: (signUpData: { email: string; password: string }) => Promise<void>
+    loyaltyPoints: number
+    refreshLoyaltyPoints: () => Promise<void>
+    updateLoyaltyPoints: (pointsToAdd: number) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-    const [session, setSession] = useState(null)
+    const [session, setSession] = useState<Session | null>(null)
     const [error, setError] = useState<string | null>(null)
     const [isLoading, setIsLoading] = useState(false)
-    const isAdmin = session?.user?.user_metadata.role === 'admin' // Assuming 'admin' is the role for admin users
+    const [loyaltyPoints, setLoyaltyPoints] = useState<number>(0)
+    const isAdmin = session?.user?.user_metadata.role === 'admin'
+
     const logout = async () => {
-        const { error } = await supabase.auth.signOut()
-        if (error) {
-            console.error('Error signing out:', error.message)
-        } else {
-            console.log('User signed out successfully')
+        try {
+            const { error } = await supabase.auth.signOut()
+            if (error) throw error
+        } catch (error) {
+            const message =
+                error instanceof Error ? error.message : 'Failed to sign out'
+            setError(message)
+            throw new Error(message)
         }
     }
+
     const login = async (loginData: { email: string; password: string }) => {
         const { email, password } = loginData
         setIsLoading(true)
@@ -38,17 +58,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 password,
             })
             if (error) throw error
-            // Update this route to redirect to an authenticated route. The user already has an active session.
-            const user = await (await supabase.auth.getUser()).data.user
-            if (user?.user_metadata?.role !== 'admin') {
-                location.href = '/'
-            } else {
-                location.href = '/staff-dashboard'
-            }
-        } catch (error: unknown) {
-            setError(
-                error instanceof Error ? error.message : 'An error occurred'
-            )
+
+            const {
+                data: { user },
+            } = await supabase.auth.getUser()
+            if (!user) throw new Error('User not found after login')
+
+            window.location.href =
+                user.user_metadata.role === 'admin' ? '/dashboard' : '/'
+        } catch (error) {
+            const message =
+                error instanceof Error ? error.message : 'Failed to sign in'
+            setError(message)
+            throw new Error(message)
         } finally {
             setIsLoading(false)
         }
@@ -56,6 +78,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const signUp = async (signUpData: { email: string; password: string }) => {
         const { email, password } = signUpData
+        setIsLoading(true)
+        setError(null)
+
         try {
             const { error } = await supabase.auth.signUp({
                 email,
@@ -69,32 +94,96 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 },
             })
             if (error) throw error
-        } catch (error: unknown) {
-            setError(
-                error instanceof Error ? error.message : 'An error occurred'
-            )
+        } catch (error) {
+            const message =
+                error instanceof Error ? error.message : 'Failed to sign up'
+            setError(message)
+            throw new Error(message)
         } finally {
             setIsLoading(false)
         }
     }
 
+    const updateLoyaltyPoints = async (pointsToAdd: number) => {
+        if (!session?.user?.id) {
+            throw new Error('User must be logged in to update loyalty points')
+        }
+
+        try {
+            const newPoints = await updateLoyaltyPointsDb(
+                session.user.id,
+                pointsToAdd
+            )
+            setLoyaltyPoints(newPoints)
+            await refreshLoyaltyPoints()
+        } catch (error) {
+            const message =
+                error instanceof Error
+                    ? error.message
+                    : 'Failed to update loyalty points'
+            setError(message)
+            throw new Error(message)
+        }
+    }
+
+    const refreshLoyaltyPoints = useCallback(async () => {
+        if (!session?.user?.id) return
+
+        try {
+            const { data, found } = await getLoyaltyPointsByUserId(
+                session.user.id
+            )
+
+            if (found && data) {
+                setLoyaltyPoints((data as any).points || 0)
+            } else {
+                setLoyaltyPoints(0)
+            }
+        } catch (error) {
+            const message =
+                error instanceof Error
+                    ? error.message
+                    : 'Failed to refresh loyalty points'
+            setError(message)
+        }
+    }, [session?.user?.id])
+
     useEffect(() => {
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            setSession(session)
-            setIsLoading(false)
-        })
+        const initializeAuth = async () => {
+            try {
+                const {
+                    data: { session: initialSession },
+                } = await supabase.auth.getSession()
+                setSession(initialSession)
+            } catch (error) {
+                const message =
+                    error instanceof Error
+                        ? error.message
+                        : 'Failed to initialize auth'
+                setError(message)
+            } finally {
+                setIsLoading(false)
+            }
+        }
+
+        initializeAuth()
+
         const {
             data: { subscription },
         } = supabase.auth.onAuthStateChange((_event, session) => {
             setSession(session)
         })
+
         return () => subscription.unsubscribe()
     }, [])
 
     useEffect(() => {
-        console.log('Session updated:', session?.user?.user_metadata)
-        console.log(isAdmin ? 'User is an admin' : 'User is not an admin')
-    }, [session])
+        if (session?.user?.id) {
+            refreshLoyaltyPoints()
+        } else {
+            setLoyaltyPoints(0)
+        }
+    }, [session, refreshLoyaltyPoints])
 
     return (
         <AuthContext.Provider
@@ -107,6 +196,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 login,
                 signUp,
                 setError,
+                loyaltyPoints,
+                refreshLoyaltyPoints,
+                updateLoyaltyPoints,
             }}
         >
             {children}
@@ -121,9 +213,3 @@ export const useAuth = () => {
     }
     return context
 }
-
-// UPDATE auth.users
-// SET
-//     raw_user_meta_data = '{"sub": "a3462f35-65ac-43bd-b48a-b0a47bf5221b", "role": "admin", "email": "ovic.391@gmail.com", "last_name": "User", "first_name": "ovic.391", "email_verified": true, "phone_verified": false}'::jsonb
-// WHERE
-//     id = 'a3462f35-65ac-43bd-b48a-b0a47bf5221b'; -- Replace with the actual UUID of the user

@@ -40,6 +40,7 @@ export default function DrinkRecomaindationSystem() {
     const [categories, setCategories] = useState<any[]>([])
     const {
         session: { user },
+        updateLoyaltyPoints,
     } = useAuth()
     const location = useLocation ? useLocation() : { search: '' }
     const navigate = useNavigate ? useNavigate() : () => {}
@@ -242,6 +243,7 @@ export default function DrinkRecomaindationSystem() {
                     user_name: user?.email.split('@')[0] || '',
                 },
             ])
+            updateLoyaltyPoints(1)
             toast({
                 title: 'تم إرسال الطلب',
                 description: 'تم إرسال طلبك بنجاح وسيظهر للنادل.',
