@@ -7,20 +7,19 @@ interface AdminProtectedRouteProps {
 }
 
 const AdminProtectedRoute = ({ children }: AdminProtectedRouteProps) => {
-    const { isAdmin, loading } = useAuth()
+    const { session, isAdmin, isLoading } = useAuth()
     const location = useLocation()
 
     // Show loading state while checking authentication
-    if (loading) {
+    if (isLoading) {
         return (
             <div className='flex items-center justify-center min-h-screen'>
                 Loading...
             </div>
         )
     }
-
     // Redirect to admin login if not authenticated
-    if (!isAdmin) {
+    if (session && !isAdmin) {
         return <Navigate to='/sign-in' state={{ from: location }} replace />
     }
 

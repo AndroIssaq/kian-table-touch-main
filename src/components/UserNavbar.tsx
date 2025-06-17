@@ -28,8 +28,9 @@ export function UserNavbar({
     const {
         session: { user },
         logout,
+        loyaltyPoints,
+        refreshLoyaltyPoints,
     } = useAuth()
-    const { points, refreshPoints } = useLoyaltyPoints()
     const [loading, setLoading] = useState(false)
 
     return (
@@ -80,7 +81,7 @@ export function UserNavbar({
                         {loading ? (
                             <Loader2 className='animate-spin h-5 w-5' />
                         ) : (
-                            points ?? '-'
+                            loyaltyPoints ?? '-'
                         )}
                         <span className='text-xs font-semibold ml-0.5 hidden sm:inline'>
                             نقطة
@@ -123,7 +124,7 @@ export function UserNavbar({
                                 {loading ? (
                                     <Loader2 className=' h-6 w-6' />
                                 ) : (
-                                    points ?? '-'
+                                    loyaltyPoints ?? '-'
                                 )}
                             </span>
                         </div>
