@@ -10,7 +10,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useState } from 'react'
-import { supabase } from '@/integrations/supabase/client'
+import { useAuth } from '@/contexts/useAuth'
 export default function SignUpForm({
     className,
     ...props
@@ -18,34 +18,19 @@ export default function SignUpForm({
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [repeatPassword, setRepeatPassword] = useState('')
-    const [error, setError] = useState<string | null>(null)
-    const [isLoading, setIsLoading] = useState(false)
     const [success, setSuccess] = useState(false)
-
+    const { error, isLoading, signUp, setError } = useAuth()
     const handleSignUp = async (e: React.FormEvent) => {
         e.preventDefault()
-        setError(null)
-
+        if (!email || !password || !repeatPassword) {
+            setError('All fields are required')
+            return
+        }
         if (password !== repeatPassword) {
             setError('Passwords do not match')
             return
         }
-        setIsLoading(true)
-
-        try {
-            const { error } = await supabase.auth.signUp({
-                email,
-                password,
-            })
-            if (error) throw error
-            setSuccess(true)
-        } catch (error: unknown) {
-            setError(
-                error instanceof Error ? error.message : 'An error occurred'
-            )
-        } finally {
-            setIsLoading(false)
-        }
+        signUp({ email, password })
     }
 
     return (

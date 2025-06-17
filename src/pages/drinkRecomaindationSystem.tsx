@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { Loader2 } from 'lucide-react'
-import { supabase } from '@/integrations/supabase/client'
+import { supabase } from '@/lib/supabase/client'
 import {
     Dialog,
     DialogContent,
@@ -14,8 +14,8 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { toast } from '@/components/ui/use-toast'
 import { useAuth } from '@/contexts/useAuth'
 
-const API_KEY = 'e851f370223a4fb386461710250406'
-const LOCATION = 'Heliopolis, Cairo, Egypt'
+const API_KEY = import.meta.env.VITE_WEATHER_API_KEY || ''
+const LOCATION = import.meta.env.VITE_WEATHER_LOCATION || 'Cairo, Egypt'
 
 // تعريف أنواع التصنيفات المطلوبة
 const DRINK_CATEGORIES = [

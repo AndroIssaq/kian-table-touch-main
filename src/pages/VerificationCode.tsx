@@ -1,39 +1,11 @@
 import React, { useState, useEffect, ChangeEvent, FormEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { supabase } from '@/integrations/supabase/client'
+import { supabase } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
-
-// --- Types ---
-type VerificationStatus = 'idle' | 'loading' | 'success' | 'error'
-
-// --- Helper Functions ---
-function getStatusColor(status: VerificationStatus): string {
-    switch (status) {
-        case 'success':
-            return 'text-green-600'
-        case 'error':
-            return 'text-red-600'
-        default:
-            return 'text-gray-800'
-    }
-}
-
-function isTokenValidToday(token: string | null): boolean {
-    if (!token) return false
-    const parts = token.split('-')
-    const timestamp = parts.length > 2 ? Number(parts[2]) : null
-    if (!timestamp) return false
-    const tokenDate = new Date(timestamp)
-    const now = new Date()
-    return (
-        tokenDate.getFullYear() === now.getFullYear() &&
-        tokenDate.getMonth() === now.getMonth() &&
-        tokenDate.getDate() === now.getDate()
-    )
-}
+import { isTokenValidToday, getStatusColor } from '@/lib/utils'
 
 // --- Main Component ---
 const VerificationCode: React.FC = () => {

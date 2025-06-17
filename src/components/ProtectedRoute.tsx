@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useState } from 'react'
-import { Navigate, useLocation } from 'react-router-dom'
+import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/useAuth'
 
 interface ProtectedRouteProps {
@@ -62,6 +62,6 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     if (session === null) {
         return <Navigate to='/sign-in' replace />
     }
-    return <>{children}</>
+    return <Outlet />
 }
 export default ProtectedRoute

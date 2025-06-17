@@ -8,7 +8,7 @@ import {
     PopoverTrigger,
 } from '@/components/ui/popover'
 import ThemeLanguageToggle from '@/components/ThemeLanguageToggle'
-import { useLoyaltyPoints } from '@/contexts/LoyaltyPointsContext'
+import { useLoyaltyPoints } from '@/contexts/useLoyaltyPoints'
 import { useAuth } from '@/contexts/useAuth'
 interface TubelightNavbarProps {
     logo?: React.ReactNode

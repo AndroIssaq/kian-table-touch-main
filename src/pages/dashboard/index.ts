@@ -1,0 +1,7 @@
+export { default as CategoryProducts } from './CategoryProducts'
+export { default as StaffDashboard } from './Dashboard'
+export { default as UsersDashboard } from './UsersDashboard'
+export { default as MenuDashboard } from './MenuDashboard'
+export { default as LoyaltyManagement } from './LoyaltyManagement'
+export { default as Reports } from './ReportsDashboard'
+export { default as DashboardLayout } from './DashboardLayout'

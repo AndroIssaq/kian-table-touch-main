@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { useLanguage } from '@/contexts/LanguageContext'
+import { useLanguage } from '@/contexts/useLanguage'
 import {
     Coffee,
     Wifi,
@@ -19,7 +19,7 @@ import { Pagination } from 'swiper/modules'
 import { Autoplay } from 'swiper/modules'
 import 'swiper/css'
 import 'swiper/css/pagination'
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/use-toast'
 import DrinkRecomaindationSystem from './drinkRecomaindationSystem'
 import { useAuth } from '@/contexts/useAuth'
@@ -38,11 +38,6 @@ const sectionVariants = {
         },
     }),
 }
-
-const supabase = createClient(
-    import.meta.env.VITE_SUPABASE_URL!,
-    import.meta.env.VITE_SUPABASE_ANON_KEY!
-)
 
 const UserHome = () => {
     const navigate = useNavigate()

@@ -3,13 +3,13 @@ import { Button } from '@/components/ui/button'
 import { ArrowLeft, ReceiptText } from 'lucide-react'
 import PageTransition from '@/components/PageTransition'
 import ThemeLanguageToggle from '@/components/ThemeLanguageToggle'
-import { useLanguage } from '@/contexts/LanguageContext'
-import { supabase } from '@/integrations/supabase/client'
-import { useLoyaltyPoints } from '@/contexts/LoyaltyPointsContext'
-import { registerLoyaltyVisitByUserId } from '@/integrations/supabase/loyalty'
+import { useLanguage } from '@/contexts/useLanguage'
+import { supabase } from '@/lib/supabase/client'
+import { useLoyaltyPoints } from '@/contexts/useLoyaltyPoints'
+import { registerLoyaltyVisitByUserId } from '@/lib/supabase/loyalty'
 import { useEffect, useState } from 'react'
 import UserNavbar from '@/components/UserNavbar'
-import { useCart } from '@/contexts/CartContext'
+import { useCart } from '@/contexts/useCart'
 import {
     Dialog,
     DialogContent,

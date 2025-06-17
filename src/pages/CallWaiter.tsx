@@ -7,11 +7,11 @@ import PageTransition from '@/components/PageTransition'
 import { toast } from '@/components/ui/use-toast'
 import { Toaster } from '@/components/ui/toaster'
 import { motion } from 'framer-motion'
-import { useLanguage } from '@/contexts/LanguageContext'
-import { supabase } from '@/integrations/supabase/client'
-import { registerLoyaltyVisitByUserId } from '@/integrations/supabase/loyalty'
-import { useCart } from '@/contexts/CartContext'
-import { useLoyaltyPoints } from '@/contexts/LoyaltyPointsContext'
+import { useLanguage } from '@/contexts/useLanguage'
+import { supabase } from '@/lib/supabase/client'
+import { registerLoyaltyVisitByUserId } from '@/lib/supabase/loyalty'
+import { useCart } from '@/contexts/useCart'
+import { useLoyaltyPoints } from '@/contexts/useLoyaltyPoints'
 import {
     Dialog,
     DialogContent,
